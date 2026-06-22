@@ -44,7 +44,7 @@ jobs:
 
     steps:
       - name: '📥 Checkout Repository'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: '📚 Build Documentation'
         id: docfx
@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: '📥 Checkout Repository'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -96,7 +96,7 @@ jobs:
 
     steps:
       - name: '📥 Checkout Repository'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: '🚀 Create GitHub Release'
         uses: laerdal/github_actions/github-release@main

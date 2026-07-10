@@ -21,10 +21,13 @@ Actions is a curated collection of powerful, reliable, and well-documented GitHu
 - **[DocFX Metadata](dotnet-docfx-metadata/README.md)** - Extract API metadata from .NET code
 - **[DocFX PDF](dotnet-docfx-pdf/README.md)** - Generate PDF documentation
 
-### 🔒 Security & Certificates
+### 🔒 Security & Supply Chain
 
 - **[Install Apple Certificate](install-apple-certificate/README.md)** - Install Apple certificates for iOS/macOS development
 - **[CycloneDX SBOM](dotnet-cyclonedx/README.md)** - Generate Software Bill of Materials
+- **[gh-sbom](gh-sbom/README.md)** - Generate repository SBOMs (SPDX/CycloneDX) via the GitHub CLI
+- **[SBOM Sign](sbom-sign/README.md)** - Sign SBOM files with RSA signatures using the CycloneDX CLI
+- **[SBOM Publish](sbom-publish/README.md)** - Upload SBOM files to Dependency-Track and compatible systems
 
 ### 🚀 Release & Versioning
 

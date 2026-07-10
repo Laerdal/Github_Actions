@@ -23,47 +23,55 @@ A comprehensive collection of reusable GitHub Actions for .NET development, docu
 - 🛠️ **Tool Management** - .NET global tool installation and management
 - 📦 **Package Publishing** - NuGet package upload and feed management
 - 🔐 **Security** - Apple certificate installation for code signing
+- 🔒 **Supply Chain Security** - SBOM generation, signing, and publishing to Dependency-Track
 
 ## 📋 Available Actions
 
 ### Core Actions
 
-| Action | Description | Key Features |
-|--------|-------------|--------------|
-| [🔢 generate-version](./generate-version/) | Smart semantic versioning | Git tag analysis, branch-aware versioning, multiple output formats |
-| [🏷️ git-tag](./git-tag/) | Git tag management | Annotated/lightweight tags, force options, validation |
-| [🎨 generate-badge](./generate-badge/) | Custom badge creation | SVG generation, shields.io integration, multiple formats |
-| [🚀 github-release](./github-release/) | Release automation | Auto-generated notes, asset uploads, draft/prerelease support |
+| Action                                    | Description               | Key Features                                                       |
+|-------------------------------------------|---------------------------|--------------------------------------------------------------------|
+| [🔢 generate-version](./generate-version) | Smart semantic versioning | Git tag analysis, branch-aware versioning, multiple output formats |
+| [🏷️ git-tag](./git-tag)                   | Git tag management        | Annotated/lightweight tags, force options, validation              |
+| [🎨 generate-badge](./generate-badge)     | Custom badge creation     | SVG generation, shields.io integration, multiple formats           |
+| [🚀 github-release](./github-release)     | Release automation        | Auto-generated notes, asset uploads, draft/prerelease support      |
 
 ### .NET Ecosystem
 
-| Action | Description | Key Features |
-|--------|-------------|--------------|
-| [🛠️ dotnet-tool-install](./dotnet-tool-install/) | .NET tool management | Global tool installation, version control, caching |
-| [📦 dotnet-pack](./dotnet-pack/) | Package creation | NuGet package building, symbol support, artifact management |
-| [🧪 dotnet-test](./dotnet-test/) | Test execution | Comprehensive testing, coverage, filtering, reporting |
-| [📚 dotnet-docfx-build](./dotnet-docfx-build/) | Documentation generation | DocFX integration, theme support, metadata injection |
-| [📄 dotnet-docfx-metadata](./dotnet-docfx-metadata/) | API documentation | Metadata extraction, XML documentation |
-| [📖 dotnet-docfx-pdf](./dotnet-docfx-pdf/) | PDF generation | Documentation export to PDF |
-| [📦 dotnet-nuget-upload](./dotnet-nuget-upload/) | Package publishing | NuGet upload, feed management |
-| [🔧 dotnet-nuget-feed-setup](./dotnet-nuget-feed-setup/) | Feed configuration | Private feed setup, authentication |
-| [🔍 dotnet-cyclonedx](./dotnet-cyclonedx/) | SBOM generation | Software Bill of Materials creation |
+| Action                                                  | Description              | Key Features                                                |
+|---------------------------------------------------------|--------------------------|-------------------------------------------------------------|
+| [🛠️ dotnet-tool-install](./dotnet-tool-install)         | .NET tool management     | Global tool installation, version control, caching          |
+| [📦 dotnet-pack](./dotnet-pack)                         | Package creation         | NuGet package building, symbol support, artifact management |
+| [🧪 dotnet-test](./dotnet-test)                         | Test execution           | Comprehensive testing, coverage, filtering, reporting       |
+| [📚 dotnet-docfx-build](./dotnet-docfx-build)           | Documentation generation | DocFX integration, theme support, metadata injection        |
+| [📄 dotnet-docfx-metadata](./dotnet-docfx-metadata)     | API documentation        | Metadata extraction, XML documentation                      |
+| [📖 dotnet-docfx-pdf](./dotnet-docfx-pdf)               | PDF generation           | Documentation export to PDF                                 |
+| [📦 dotnet-nuget-upload](./dotnet-nuget-upload)         | Package publishing       | NuGet upload, feed management                               |
+| [🔧 dotnet-nuget-feed-setup](./dotnet-nuget-feed-setup) | Feed configuration       | Private feed setup, authentication                          |
+| [🔍 dotnet-cyclonedx](./dotnet-cyclonedx)               | SBOM generation          | Software Bill of Materials creation                         |
 
 ### Utility Actions
 
-| Action | Description | Key Features |
-|--------|-------------|--------------|
-| [🛠 normalize-arguments](./normalize-arguments/) | Argument normalization | Multi-line to single-line conversion, customizable separators |
-| [📁 normalize-path](./normalize-path/) | Path normalization | Cross-platform paths, existence checking, absolute resolution |
-| [🌳 debug-tree](./debug-tree/) | Directory tree display | Debug directory structure, configurable depth |
-| [📦 gh-sbom](./gh-sbom/) | GitHub SBOM generation | Repository SBOM creation, multiple formats |
+| Action                                          | Description            | Key Features                                                  |
+|-------------------------------------------------|------------------------|---------------------------------------------------------------|
+| [🛠 normalize-arguments](./normalize-arguments) | Argument normalization | Multi-line to single-line conversion, customizable separators |
+| [📁 normalize-path](./normalize-path)           | Path normalization     | Cross-platform paths, existence checking, absolute resolution |
+| [🌳 debug-tree](./debug-tree)                   | Directory tree display | Debug directory structure, configurable depth                 |
+
+### 🔒 Security & Supply Chain Actions
+
+| Action                            | Description            | Key Features                                                   |
+|-----------------------------------|------------------------|----------------------------------------------------------------|
+| [📦 gh-sbom](./gh-sbom)           | GitHub SBOM generation | Repository SBOM creation, SPDX/CycloneDX formats               |
+| [🔒 sbom-sign](./sbom-sign)       | SBOM signing           | RSA signatures via CycloneDX CLI, Docker/Homebrew installation |
+| [📤 sbom-publish](./sbom-publish) | SBOM publishing        | Dependency-Track upload, retry logic, parent project support   |
 
 ### Specialized Actions
 
-| Action | Description | Key Features |
-|--------|-------------|--------------|
-| [🔐 install-apple-certificate](./install-apple-certificate/) | Code signing setup | Apple certificate installation, keychain management |
-| [🎯 dotnet](./dotnet/) | .NET SDK actions | Multi-framework support, build automation |
+| Action                                                      | Description        | Key Features                                        |
+|-------------------------------------------------------------|--------------------|-----------------------------------------------------|
+| [🔐 install-apple-certificate](./install-apple-certificate) | Code signing setup | Apple certificate installation, keychain management |
+| [🎯 dotnet](./dotnet)                                       | .NET SDK actions   | Multi-framework support, build automation           |
 
 ## 🏗️ CI/CD Pipeline
 
@@ -71,7 +79,7 @@ This repository includes a comprehensive CI/CD pipeline (`.github/workflows/ci.y
 
 ```mermaid
 graph TD
-    A[📥 Checkout] --> B[🔢 Generate Version]
+    A [📥 Checkout] --> B[🔢 Generate Version]
     B --> C[📦 Upload Version Artifacts]
     C --> D[🎨 Generate Badge]
     D --> E[� Upload Badge Artifacts]
@@ -266,6 +274,6 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 **⭐ Star this repository if you find it useful!**
 
-[📚 Documentation](https://laerdal.github.io/Github_Actions/) • [🐛 Report Bug](https://github.com/laerdal/Github_Actions/issues) • [💡 Request Feature](https://github.com/laerdal/Github_Actions/issues)
+[📚 Documentation](https://laerdal.github.io/Github_Actions) • [🐛 Report Bug](https://github.com/laerdal/Github_Actions/issues) • [💡 Request Feature](https://github.com/laerdal/Github_Actions/issues)
 
 </div>

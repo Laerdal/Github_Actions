@@ -1,0 +1,442 @@
+name: "📤 Upload SBOM"
+description: "Uploads Software Bill of Materials (SBOM) files to dependency tracking systems with retry logic and comprehensive validation"
+author: "Kyriakos Sidiropoulos, Francois Raminosona"
+
+inputs:
+  sbom-file-path:
+    description: "Path to the SBOM file to upload"
+    required: true
+
+  project-name:
+    description: "Name of the project"
+    required: true
+
+  project-tags:
+    description: "Comma-separated tags to associate with the project in the dependency tracker"
+    required: false
+
+  project-version:
+    description: "Version of the project"
+    required: true
+
+  dependency-tracker-url:
+    description: "URL of the Dependency Tracker API endpoint"
+    required: true
+
+  dependency-tracker-api-key:
+    description: "API key for the Dependency Tracker"
+    required: true
+
+  parent-project-name:
+    description: "Name of the parent project"
+    required: false
+
+  parent-project-version:
+    description: "Version of the parent project"
+    required: false
+
+  auto-create:
+    description: "Automatically create the project if it does not exist"
+    required: false
+    default: "true"
+
+  timeout-seconds:
+    description: "Timeout for the upload request in seconds"
+    required: false
+    default: "300"
+
+  retry-attempts:
+    description: "Number of retry attempts if upload fails"
+    required: false
+    default: "3"
+
+  retry-delay-seconds:
+    description: "Delay between retry attempts in seconds"
+    required: false
+    default: "10"
+
+  show-summary:
+    description: "Whether to show the action summary"
+    required: false
+    default: "false"
+
+outputs:
+  upload-status:
+    description: "Status of the upload (success/failed)"
+    value: ${{ steps.upload.outputs.status }}
+
+  http-status-code:
+    description: "HTTP status code from the upload request"
+    value: ${{ steps.upload.outputs.http-code }}
+
+  response-body:
+    description: "Response body from the upload request"
+    value: ${{ steps.upload.outputs.response-body }}
+
+  upload-timestamp:
+    description: "ISO timestamp when the upload was completed"
+    value: ${{ steps.upload.outputs.timestamp }}
+
+  project-url:
+    description: "URL to view the project in the dependency tracker"
+    value: ${{ steps.upload.outputs.project-url }}
+
+  file-size:
+    description: "Size of the uploaded SBOM file in bytes"
+    value: ${{ steps.build-args.outputs.file-size }}
+
+  upload-duration:
+    description: "Duration of the upload request in seconds"
+    value: ${{ steps.upload.outputs.duration }}
+
+runs:
+  using: "composite"
+  steps:
+    # ================== ℹ️ ==================
+
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::curl Version: $(curl --version | head -n 1 || echo 'Not installed')"
+
+    # ================== 🔒 ==================
+
+    - name: "🔒 Mask sensitive data"
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.dependency-tracker-api-key }}" ]; then
+          echo "::add-mask::${{ inputs.dependency-tracker-api-key }}"
+        fi
+
+        echo "::debug::Masked sensitive inputs"
+
+    # ================== 📁 ==================
+
+    - name: "📁 Normalize sbom-file-path"
+      id: normalize-sbom-file
+      uses: laerdal/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.sbom-file-path }}
+
+    # ================== ✅ ==================
+
+    - name: "✅ Validate input : required parameters"
+      shell: bash
+      run: |
+        echo "::debug::Validating required inputs..."
+        has_errors=false
+
+        for param in sbom-file-path project-name project-version dependency-tracker-url dependency-tracker-api-key; do
+          case $param in
+            sbom-file-path) value="${{ inputs.sbom-file-path }}" ;;
+            project-name) value="${{ inputs.project-name }}" ;;
+            project-version) value="${{ inputs.project-version }}" ;;
+            dependency-tracker-url) value="${{ inputs.dependency-tracker-url }}" ;;
+            dependency-tracker-api-key) value="${{ inputs.dependency-tracker-api-key }}" ;;
+          esac
+          if [ -z "$value" ]; then
+            echo "::error::Parameter $param is required but was not provided."
+            has_errors=true
+          fi
+        done
+
+        if [ "$has_errors" = "true" ]; then
+          echo "::error::Please provide all required inputs for SBOM upload"
+          exit 1
+        fi
+
+        echo "✅ Required input validation passed"
+
+    - name: "✅ Validate input : booleans"
+      shell: bash
+      run: |
+        echo "::debug::Validating boolean inputs..."
+        for param in auto-create show-summary; do
+          case $param in
+            auto-create) value="${{ inputs.auto-create }}" ;;
+            show-summary) value="${{ inputs.show-summary }}" ;;
+          esac
+          if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
+            echo "::error::Parameter $param must be 'true' or 'false', got: $value"
+            exit 1
+          fi
+        done
+
+        echo "✅ Boolean inputs validation completed successfully"
+
+    - name: "✅ Validate input : numeric parameters"
+      shell: bash
+      run: |
+        echo "::debug::Validating numeric inputs..."
+        has_errors=false
+
+        for param in timeout-seconds retry-attempts retry-delay-seconds; do
+          case $param in
+            timeout-seconds) value="${{ inputs.timeout-seconds }}" ;;
+            retry-attempts) value="${{ inputs.retry-attempts }}" ;;
+            retry-delay-seconds) value="${{ inputs.retry-delay-seconds }}" ;;
+          esac
+          if ! [[ "$value" =~ ^[0-9]+$ ]]; then
+            echo "::error::Parameter $param must be a positive integer, got: $value"
+            has_errors=true
+          fi
+        done
+
+        if [ "$has_errors" = "true" ]; then
+          exit 1
+        fi
+
+        echo "✅ Numeric inputs validation completed successfully"
+
+    - name: "✅ Validate input : file and URL"
+      shell: bash
+      run: |
+        echo "::debug::Validating SBOM file and dependency tracker URL..."
+        has_errors=false
+
+        if [ ! -f "${{ steps.normalize-sbom-file.outputs.absolute }}" ]; then
+          echo "::error file=${{ steps.normalize-sbom-file.outputs.normalized }}::SBOM file not found at: ${{ steps.normalize-sbom-file.outputs.normalized }}"
+          has_errors=true
+        fi
+
+        if [[ ! "${{ inputs.dependency-tracker-url }}" =~ ^https?:// ]]; then
+          echo "::error::Dependency tracker URL must start with http:// or https://. Provided URL: ${{ inputs.dependency-tracker-url }}"
+          has_errors=true
+        fi
+
+        if [ "$has_errors" = "true" ]; then
+          exit 1
+        fi
+
+        echo "✅ File and URL validation passed"
+
+    # ================== 🏗️ ==================
+
+    - name: "🏗️ Build argument list"
+      id: build-args
+      shell: bash
+      run: |
+        echo "::debug::Building upload parameters and metadata..."
+
+        # Optional project tags
+        project_tags_params=""
+        if [ -n "${{ inputs.project-tags }}" ]; then
+          project_tags_params="--form projectTags='${{ inputs.project-tags }}'"
+          echo "::debug::Project-Tags: ${{ inputs.project-tags }}"
+        fi
+        echo "project-tags-params=$project_tags_params" >> $GITHUB_OUTPUT
+
+        # Optional parent project parameters (quoted to survive values containing spaces)
+        parent_params=""
+        if [ -n "${{ inputs.parent-project-name }}" ]; then
+          parent_params="$parent_params --form parentName='${{ inputs.parent-project-name }}'"
+          echo "::debug::Parent project: ${{ inputs.parent-project-name }}"
+        fi
+        if [ -n "${{ inputs.parent-project-version }}" ]; then
+          parent_params="$parent_params --form parentVersion='${{ inputs.parent-project-version }}'"
+          echo "::debug::Parent version: ${{ inputs.parent-project-version }}"
+        fi
+        parent_params="${parent_params# }"
+        echo "parent-params=$parent_params" >> $GITHUB_OUTPUT
+
+        # File information and validation
+        file_size=$(stat -c%s "${{ steps.normalize-sbom-file.outputs.absolute }}" 2>/dev/null || stat -f%z "${{ steps.normalize-sbom-file.outputs.absolute }}")
+        echo "file-size=$file_size" >> $GITHUB_OUTPUT
+        echo "::debug::SBOM file size: $file_size bytes"
+
+        if [ "$file_size" -gt 10485760 ]; then # 10MB
+          echo "::warning::SBOM file is larger than 10MB, upload may take longer"
+        fi
+
+        echo "✅ Upload parameters built successfully"
+
+    # ================== 🚀 ==================
+
+    - name: "📤 Upload SBOM with retry logic"
+      id: upload
+      shell: bash
+      run: |
+        echo "🚀 Starting SBOM upload to dependency tracker..."
+        echo "🎯 Target URL: ${{ inputs.dependency-tracker-url }}"
+        echo "📦 Project: ${{ inputs.project-name }} v${{ inputs.project-version }}"
+        echo "📄 SBOM file: ${{ steps.normalize-sbom-file.outputs.normalized }} (${{ steps.build-args.outputs.file-size }} bytes)"
+
+        if [ -n "${{ inputs.parent-project-name }}" ]; then
+          if [ -n "${{ inputs.parent-project-version }}" ]; then
+            echo "👨‍👩‍👧‍👦 Parent project: ${{ inputs.parent-project-name }} v${{ inputs.parent-project-version }}"
+          else
+            echo "👨‍👩‍👧‍👦 Parent project: ${{ inputs.parent-project-name }}"
+          fi
+        fi
+
+        max_attempts=${{ inputs.retry-attempts }}
+        retry_delay=${{ inputs.retry-delay-seconds }}
+        timeout_seconds=${{ inputs.timeout-seconds }}
+
+        echo "⚙️ Max attempts: $max_attempts | Retry delay: ${retry_delay}s | Timeout: ${timeout_seconds}s"
+
+        # Create temporary file for response
+        response_file=$(mktemp)
+
+        for attempt in $(seq 1 $max_attempts); do
+          echo ""
+          echo "🔄 Upload attempt $attempt of $max_attempts"
+
+          curl_cmd=(
+            "curl"
+            "--location"
+            "--request" "POST"
+            "--header" "Content-Type: multipart/form-data"
+            "--header" "X-API-Key: ${{ inputs.dependency-tracker-api-key }}"
+            "--form" "bom=@${{ steps.normalize-sbom-file.outputs.absolute }}"
+            "--form" "autoCreate=${{ inputs.auto-create }}"
+            "--form" "projectName=${{ inputs.project-name }}"
+            "--form" "projectVersion=${{ inputs.project-version }}"
+            "--max-time" "$timeout_seconds"
+            "--output" "$response_file"
+            "--write-out" "%{http_code}|%{time_total}|%{size_upload}"
+            "--silent"
+            "--show-error"
+          )
+
+          # Add project tags if provided
+          if [ -n "${{ steps.build-args.outputs.project-tags-params }}" ]; then
+            eval "curl_cmd+=(${{ steps.build-args.outputs.project-tags-params }})"
+          fi
+
+          # Add parent project parameters if provided
+          if [ -n "${{ steps.build-args.outputs.parent-params }}" ]; then
+            eval "curl_cmd+=(${{ steps.build-args.outputs.parent-params }})"
+          fi
+
+          curl_cmd+=("${{ inputs.dependency-tracker-url }}")
+
+          echo "🚀 Executing upload command..."
+
+          curl_output=$("${curl_cmd[@]}" 2>&1)
+          curl_exit_code=$?
+
+          # Parse curl output (format: http_code|time_total|size_upload)
+          IFS='|' read -r http_code time_total size_upload <<< "$curl_output"
+
+          echo "📊 Upload metrics:"
+          echo "  HTTP Status: $http_code"
+          echo "  Time taken: ${time_total}s"
+          echo "  Bytes uploaded: $size_upload"
+          echo "  Curl exit code: $curl_exit_code"
+
+          response_body=""
+          if [[ -f "$response_file" && -s "$response_file" ]]; then
+            response_body=$(head -c 1000 "$response_file") # Limit to prevent log overflow
+            echo "📝 Response preview: ${response_body:0:200}..."
+          fi
+
+          if [[ $curl_exit_code -eq 0 && -n "$http_code" && $http_code -ge 200 && $http_code -lt 300 ]]; then
+            echo "✅ Upload successful!"
+
+            timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            base_url="${{ inputs.dependency-tracker-url }}"
+            project_base_url="${base_url%/api/v1/bom}"
+            project_url="${project_base_url}/projects"
+
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "http-code=$http_code" >> $GITHUB_OUTPUT
+            echo "response-body=$response_body" >> $GITHUB_OUTPUT
+            echo "timestamp=$timestamp" >> $GITHUB_OUTPUT
+            echo "project-url=$project_url" >> $GITHUB_OUTPUT
+            echo "duration=$time_total" >> $GITHUB_OUTPUT
+
+            echo "🔗 Project URL: $project_url"
+            echo "⏱️ Completed at: $timestamp"
+
+            rm -f "$response_file"
+            exit 0
+
+          elif [[ $attempt -eq $max_attempts ]]; then
+            echo "::error::Upload failed after $max_attempts attempts (HTTP $http_code, curl exit code $curl_exit_code)"
+
+            if [[ -n "$response_body" ]]; then
+              echo "📝 Final response: $response_body"
+            fi
+
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "http-code=$http_code" >> $GITHUB_OUTPUT
+            echo "response-body=$response_body" >> $GITHUB_OUTPUT
+            echo "duration=$time_total" >> $GITHUB_OUTPUT
+
+            rm -f "$response_file"
+            echo "::notice::Check API key permissions and dependency tracker configuration"
+            exit 1
+
+          else
+            echo "⚠️ Upload attempt $attempt failed, retrying in ${retry_delay}s..."
+            sleep $retry_delay
+          fi
+        done
+
+    # ================== 🔍 ==================
+
+    - name: "🔍 Validate upload result"
+      shell: bash
+      run: |
+        echo "🔍 Validating upload result..."
+
+        if [ "${{ steps.upload.outputs.status }}" = "success" ]; then
+          echo "✅ SBOM upload validation passed"
+          echo "🔢 HTTP Status: ${{ steps.upload.outputs.http-code }}"
+          echo "⏱️ Timestamp: ${{ steps.upload.outputs.timestamp }}"
+        else
+          echo "::error::SBOM upload validation failed (status: ${{ steps.upload.outputs.status }})"
+          exit 1
+        fi
+
+    # ================== 📊 ==================
+
+    - name: "📊 Action Summary"
+      if: always() && inputs.show-summary == 'true'
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 SBOM Publish Summary</summary>
+
+        ## 🔧 Configuration
+        | Parameter | Value |
+        |-----------|-------|
+        | 📦 **Project Name** | `${{ inputs.project-name }}` |
+        | 🏷️ **Project Version** | `${{ inputs.project-version }}` |
+        | 📄 **SBOM File** | `${{ steps.normalize-sbom-file.outputs.normalized }}` |
+        | 🎯 **Tracker URL** | `${{ inputs.dependency-tracker-url }}` |
+        | 👨‍👩‍👧‍👦 **Parent Project** | `${{ inputs.parent-project-name || 'None specified' }}` |
+        | 🏷️ **Project Tags** | `${{ inputs.project-tags || 'None specified' }}` |
+        | 🔄 **Auto Create** | `${{ inputs.auto-create }}` |
+
+        ## 📤 Upload Results
+        | Metric | Value |
+        |--------|-------|
+        | ✅ **Status** | `${{ steps.upload.outputs.status || 'Not executed' }}` |
+        | 🔢 **HTTP Code** | `${{ steps.upload.outputs.http-code || 'N/A' }}` |
+        | 📊 **File Size** | `${{ steps.build-args.outputs.file-size || 'Unknown' }} bytes` |
+        | ⏱️ **Duration** | `${{ steps.upload.outputs.duration || 'N/A' }}s` |
+        | 🕐 **Completion** | `${{ steps.upload.outputs.timestamp || 'Not completed' }}` |
+        | 🔗 **Project URL** | `${{ steps.upload.outputs.project-url || 'Not available' }}` |
+
+        ## ⚙️ Upload Configuration
+        | Setting | Value |
+        |---------|-------|
+        | ⏱️ **Timeout** | `${{ inputs.timeout-seconds }}s` |
+        | 🔁 **Max Attempts** | `${{ inputs.retry-attempts }}` |
+        | ⏳ **Retry Delay** | `${{ inputs.retry-delay-seconds }}s` |
+
+        ---
+
+        > 💡 **Tip**: For troubleshooting, check the dependency tracker logs and verify API key permissions.
+
+        </details>
+        EOF
+
+branding:
+  icon: "upload-cloud"
+  color: "blue"

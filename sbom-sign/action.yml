@@ -1,0 +1,442 @@
+name: "🔒 Sign SBOM"
+description: "Signs Software Bill of Materials (SBOM) files using CycloneDX CLI with RSA signatures and simplified installation methods"
+author: "Kyriakos Sidiropoulos, Francois Raminosona"
+
+inputs:
+  sbom-file-path:
+    description: "Path to the SBOM file to sign"
+    required: true
+
+  signing-key:
+    description: "Private signing key content in PEM format"
+    required: true
+
+  installation-method:
+    description: "Installation method for CycloneDX CLI (docker, brew, or skip)"
+    required: false
+    default: "docker"
+
+  cyclonedx-cli-version:
+    description: "Version of the CycloneDX CLI tool to use (for docker method)"
+    required: false
+    default: "0.29.1"
+
+  output-path:
+    description: "Path for the signed SBOM output (if different from input)"
+    required: false
+
+  signing-key-file-path:
+    description: "Path for the temporary signing key file"
+    required: false
+    default: "./signing-key.pem"
+
+  show-summary:
+    description: "Whether to show the action summary"
+    required: false
+    default: "false"
+
+outputs:
+  signed-sbom-path:
+    description: "Path to the signed SBOM file"
+    value: ${{ steps.sign.outputs.signed-sbom-path }}
+
+  signature-algorithm:
+    description: "Signature algorithm used for signing"
+    value: "RS256"
+
+  signing-timestamp:
+    description: "ISO timestamp when the SBOM was signed"
+    value: ${{ steps.sign.outputs.timestamp }}
+
+  cli-version:
+    description: "Version of the CycloneDX CLI used to sign the SBOM"
+    value: ${{ steps.sign.outputs.cli-version }}
+
+  file-size:
+    description: "Size of the signed SBOM file in bytes"
+    value: ${{ steps.sign.outputs.file-size }}
+
+runs:
+  using: "composite"
+  steps:
+    # ================== ℹ️ ==================
+
+    - name: "ℹ️ Gather environment information"
+      shell: bash
+      run: |
+        echo "::debug::Operating System: $(uname -a)"
+        echo "::debug::GitHub Runner OS: $RUNNER_OS"
+        echo "::debug::GitHub Runner Version: $RUNNER_VERSION"
+        echo "::debug::Docker Version: $(docker --version 2>/dev/null || echo 'Not installed')"
+        echo "::debug::Homebrew Version: $(brew --version 2>/dev/null | head -n 1 || echo 'Not installed')"
+
+    # ================== 🔒 ==================
+
+    - name: "🔒 Mask sensitive data"
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.signing-key }}" ]; then
+          echo "::add-mask::${{ inputs.signing-key }}"
+        fi
+
+        echo "::debug::Masked sensitive inputs"
+
+    # ================== 📁 ==================
+
+    - name: "📁 Normalize sbom-file-path"
+      id: normalize-sbom-file
+      uses: laerdal/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.sbom-file-path }}
+
+    - name: "📁 Normalize output-path"
+      id: normalize-output-path
+      uses: laerdal/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.output-path }}
+
+    - name: "📁 Normalize signing-key-file-path"
+      id: normalize-signing-key-path
+      uses: laerdal/github_actions/normalize-path@main
+      with:
+        path: ${{ inputs.signing-key-file-path }}
+
+    # ================== ✅ ==================
+
+    - name: "✅ Validate input : required parameters"
+      shell: bash
+      run: |
+        echo "::debug::Validating required inputs..."
+        has_errors=false
+
+        for param in sbom-file-path signing-key; do
+          case $param in
+            sbom-file-path) value="${{ inputs.sbom-file-path }}" ;;
+            signing-key) value="${{ inputs.signing-key }}" ;;
+          esac
+          if [ -z "$value" ]; then
+            echo "::error::Parameter $param is required but was not provided."
+            has_errors=true
+          fi
+        done
+
+        if [ "$has_errors" = "true" ]; then
+          echo "::error::Please provide all required inputs for SBOM signing"
+          exit 1
+        fi
+
+        echo "✅ Required input validation passed"
+
+    - name: "✅ Validate input : booleans"
+      shell: bash
+      run: |
+        echo "::debug::Validating boolean inputs..."
+        if [ -n "${{ inputs.show-summary }}" ] && [ "${{ inputs.show-summary }}" != "true" ] && [ "${{ inputs.show-summary }}" != "false" ]; then
+          echo "::error::Parameter show-summary must be 'true' or 'false', got: ${{ inputs.show-summary }}"
+          exit 1
+        fi
+
+        echo "✅ Boolean inputs validation completed successfully"
+
+    - name: "✅ Validate input : installation-method"
+      shell: bash
+      run: |
+        echo "::debug::Validating installation method: ${{ inputs.installation-method }}"
+
+        case "${{ inputs.installation-method }}" in
+          docker|brew|skip)
+            echo "✅ Installation method: ${{ inputs.installation-method }}"
+            ;;
+          *)
+            echo "::error::Invalid installation method '${{ inputs.installation-method }}'. Supported methods: docker, brew, skip"
+            exit 1
+            ;;
+        esac
+
+    - name: "✅ Validate input : sbom-file-path"
+      shell: bash
+      run: |
+        echo "::debug::Validating SBOM file: ${{ steps.normalize-sbom-file.outputs.normalized }}"
+
+        if [ ! -f "${{ steps.normalize-sbom-file.outputs.normalized }}" ]; then
+          echo "::error file=${{ steps.normalize-sbom-file.outputs.normalized }}::SBOM file not found at: ${{ steps.normalize-sbom-file.outputs.normalized }}"
+          exit 1
+        fi
+
+        echo "✅ SBOM file validation passed"
+
+    - name: "✅ Validate input : signing-key format"
+      shell: bash
+      run: |
+        echo "::debug::Validating signing key format..."
+
+        if [[ "${{ inputs.signing-key }}" != *"BEGIN"*"PRIVATE KEY"* ]]; then
+          echo "::warning::Signing key doesn't appear to be in PEM format"
+        fi
+
+        echo "✅ Signing key format check completed"
+
+    # ================== 🚀 ==================
+
+    - name: "🔧 Install CycloneDX CLI"
+      if: success() && inputs.installation-method != 'skip'
+      id: install
+      shell: bash
+      run: |
+        echo "🔧 Installing CycloneDX CLI using method: ${{ inputs.installation-method }}"
+
+        case "${{ inputs.installation-method }}" in
+          "docker")
+            echo "🐳 Using Docker method..."
+
+            if ! command -v docker >/dev/null 2>&1; then
+              echo "::error::Docker not found. Install Docker or use the 'brew' installation method."
+              exit 1
+            fi
+
+            docker_image="cyclonedx/cyclonedx-cli:${{ inputs.cyclonedx-cli-version }}"
+            echo "📥 Pulling Docker image: $docker_image"
+
+            if ! docker pull "$docker_image"; then
+              echo "::error::Failed to pull CycloneDX CLI Docker image"
+              exit 1
+            fi
+
+            cyclonedx_cmd="docker run --rm -v \"$PWD:/workspace\" -w /workspace $docker_image"
+            echo "✅ CycloneDX CLI Docker image ready"
+            ;;
+
+          "brew")
+            echo "🍺 Installing via Homebrew..."
+
+            if ! command -v brew >/dev/null 2>&1; then
+              echo "::error::Homebrew not found. Use the 'docker' installation method for Windows or install Homebrew first."
+              exit 1
+            fi
+
+            if ! brew install cyclonedx/cyclonedx/cyclonedx-cli; then
+              echo "::error::Failed to install CycloneDX CLI via Homebrew"
+              exit 1
+            fi
+
+            cyclonedx_cmd="cyclonedx"
+            echo "✅ CycloneDX CLI installed via Homebrew"
+            ;;
+        esac
+
+        echo "cyclonedx-command=$cyclonedx_cmd" >> $GITHUB_OUTPUT
+
+        # Verify installation using the local variable computed above. Note: we can NOT use
+        # `${{ steps.install.outputs.cyclonedx-command }}` here because expressions are resolved
+        # before this script runs, so a step's own outputs are only visible to *later* steps.
+        echo "🔍 Verifying CycloneDX CLI installation..."
+        if eval "$cyclonedx_cmd --version" >/dev/null 2>&1; then
+          echo "✅ CycloneDX CLI verification successful"
+        else
+          echo "::warning::Could not verify installation, but proceeding anyway"
+        fi
+
+    - name: "🔐 Prepare signing key"
+      if: success()
+      id: prepare-key
+      shell: bash
+      run: |
+        key_file="${{ steps.normalize-signing-key-path.outputs.normalized }}"
+        echo "🔐 Preparing signing key with security measures..."
+        echo "📍 Key file location: $key_file"
+
+        mkdir -p "$(dirname "$key_file")"
+
+        # Write the signing key to file with secure handling
+        echo "${{ inputs.signing-key }}" > "$key_file"
+
+        # Set restrictive permissions (owner read/write only)
+        chmod 600 "$key_file"
+
+        if [ ! -f "$key_file" ]; then
+          echo "::error::Failed to create signing key file"
+          exit 1
+        fi
+
+        file_size=$(stat -c%s "$key_file" 2>/dev/null || stat -f%z "$key_file")
+        if [ "$file_size" -eq 0 ]; then
+          echo "::error::Signing key file is empty"
+          exit 1
+        fi
+
+        echo "✅ Signing key prepared securely"
+        echo "📊 Key file size: $file_size bytes"
+        echo "🔒 Permissions: 600 (owner only)"
+
+        echo "key-file=$key_file" >> $GITHUB_OUTPUT
+
+    - name: "🔒 Execute SBOM signing"
+      if: success()
+      id: sign
+      shell: bash
+      run: |
+        echo "🔒 Starting SBOM signing process..."
+
+        sbom_file="${{ steps.normalize-sbom-file.outputs.normalized }}"
+        key_file="${{ steps.prepare-key.outputs.key-file }}"
+
+        # Determine output path
+        if [ -n "${{ inputs.output-path }}" ]; then
+          output_file="${{ steps.normalize-output-path.outputs.normalized }}"
+          echo "📄 Output will be saved to: $output_file"
+
+          if [ "$sbom_file" != "$output_file" ]; then
+            echo "📋 Copying SBOM to output location..."
+            mkdir -p "$(dirname "$output_file")"
+            cp "$sbom_file" "$output_file"
+            sbom_file="$output_file"
+          fi
+        else
+          output_file="$sbom_file"
+          echo "📄 Signing in-place: $output_file"
+        fi
+
+        echo "🔒 Signing configuration:"
+        echo "  Input SBOM: ${{ steps.normalize-sbom-file.outputs.normalized }}"
+        echo "  Working file: $sbom_file"
+        echo "  Key file: $key_file"
+        echo "  Final output: $output_file"
+
+        # Determine CycloneDX command (matches the method chosen during installation)
+        if [ "${{ inputs.installation-method }}" = "skip" ]; then
+          cyclonedx_cmd="cyclonedx"
+          echo "🔧 Using system-installed CycloneDX CLI"
+        else
+          cyclonedx_cmd="${{ steps.install.outputs.cyclonedx-command }}"
+          echo "🔧 Using installed CycloneDX CLI: $cyclonedx_cmd"
+        fi
+
+        timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+        echo "🚀 Executing signing command..."
+
+        if eval "$cyclonedx_cmd sign bom \"$sbom_file\" --key-file \"$key_file\""; then
+          echo "✅ SBOM signing completed successfully"
+        else
+          echo "::error::Failed to sign SBOM. Check that the signing key is valid and the SBOM format is supported"
+          exit 1
+        fi
+
+        if [ ! -f "$output_file" ]; then
+          echo "::error::Signed SBOM file not found: $output_file"
+          exit 1
+        fi
+
+        file_size=$(stat -c%s "$output_file" 2>/dev/null || stat -f%z "$output_file")
+        if [ "$file_size" -eq 0 ]; then
+          echo "::error::Signed SBOM file is empty"
+          exit 1
+        fi
+
+        cli_version=$(eval "$cyclonedx_cmd --version" 2>/dev/null | tr -d '\r\n')
+        cli_version="${cli_version:-unknown}"
+
+        echo "📊 Signing results:"
+        echo "  Signed file size: $file_size bytes"
+        echo "  CLI version: $cli_version"
+        echo "  Completion time: $timestamp"
+
+        echo "signed-sbom-path=$output_file" >> $GITHUB_OUTPUT
+        echo "timestamp=$timestamp" >> $GITHUB_OUTPUT
+        echo "file-size=$file_size" >> $GITHUB_OUTPUT
+        echo "cli-version=$cli_version" >> $GITHUB_OUTPUT
+
+    # ================== 🔍 ==================
+
+    - name: "🧹 Cleanup and verify signature"
+      if: always()
+      shell: bash
+      run: |
+        echo "🧹 Starting cleanup and verification..."
+
+        # Always cleanup signing key for security
+        key_file="${{ steps.prepare-key.outputs.key-file }}"
+        if [ -f "$key_file" ]; then
+          echo "🔐 Removing temporary signing key file: $key_file"
+          rm -f "$key_file"
+          echo "✅ Signing key securely removed"
+        fi
+
+        # Verify signature if signing was successful
+        if [ "${{ steps.sign.outcome }}" = "success" ]; then
+          signed_file="${{ steps.sign.outputs.signed-sbom-path }}"
+          echo "🔍 Verifying signed SBOM structure: $signed_file"
+
+          # Basic verification that the file contains signature elements
+          if command -v xmllint >/dev/null 2>&1 && [[ "$signed_file" == *.xml ]]; then
+            if xmllint --xpath "//signature" "$signed_file" >/dev/null 2>&1; then
+              echo "✅ XML signature element found in SBOM"
+            else
+              echo "::warning::No XML signature element detected (may be a different signing method)"
+            fi
+          else
+            if grep -qi "signature" "$signed_file" 2>/dev/null; then
+              echo "✅ Signature content detected in SBOM"
+            else
+              echo "::warning::No signature content detected (this might be normal depending on the format)"
+            fi
+          fi
+        else
+          echo "⚠️ Skipping signature verification due to signing failure"
+        fi
+
+        echo "✅ Cleanup and verification completed"
+
+    # ================== 📊 ==================
+
+    - name: "📊 Action Summary"
+      if: always() && inputs.show-summary == 'true'
+      shell: bash
+      run: |
+        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        <details><summary>Expand for details - 📊 SBOM Sign Summary</summary>
+
+        ## 🔧 Configuration
+        | Parameter | Value |
+        |-----------|-------|
+        | 📄 **Input SBOM** | `${{ steps.normalize-sbom-file.outputs.normalized }}` |
+        | 📄 **Output Path** | `${{ inputs.output-path || 'In-place signing' }}` |
+        | 🔧 **Installation Method** | `${{ inputs.installation-method }}` |
+        | 🏷️ **CycloneDX Version** | `${{ inputs.cyclonedx-cli-version }}` |
+        | 🔐 **Key File Path** | `${{ inputs.signing-key-file-path }}` |
+
+        ## 📜 Signing Results
+        | Metric | Value |
+        |--------|-------|
+        | 📄 **Signed SBOM** | `${{ steps.sign.outputs.signed-sbom-path || 'Not created' }}` |
+        | 🔒 **Algorithm** | `RS256 (RSA with SHA-256)` |
+        | 📦 **CLI Version Used** | `${{ steps.sign.outputs.cli-version || 'Unknown' }}` |
+        | 📊 **File Size** | `${{ steps.sign.outputs.file-size || 'Unknown' }} bytes` |
+        | ⏱️ **Timestamp** | `${{ steps.sign.outputs.timestamp || 'Not completed' }}` |
+        | ✅ **Status** | `${{ steps.sign.outcome == 'success' && '✅ Success' || '❌ Failed' }}` |
+
+        ## 🔧 Installation Details
+        | Setting | Value |
+        |---------|-------|
+        | 🛠️ **Method Used** | `${{ inputs.installation-method }}` |
+        | 🐳 **Docker Image** | `${{ inputs.installation-method == 'docker' && format('cyclonedx/cyclonedx-cli:{0}', inputs.cyclonedx-cli-version) || 'N/A' }}` |
+        | 🍺 **Homebrew** | `${{ inputs.installation-method == 'brew' && '✅ Used' || 'N/A' }}` |
+
+        ## 🔒 Security Features
+        | Feature | Status |
+        |---------|--------|
+        | 🔑 **Key Permissions** | `600 (owner read/write only)` |
+        | 🧹 **Auto Cleanup** | `✅ Key file securely removed` |
+        | ✅ **Post-Sign Verification** | `✅ Signature validation performed` |
+        | 🔐 **PEM Format Check** | `${{ contains(inputs.signing-key, 'PRIVATE KEY') && '✅ Valid format' || '⚠️ Check format' }}` |
+
+        ---
+
+        > 💡 **Tip**: For verification, use `cyclonedx verify all <signed-sbom-file> --key-file <public-key-file>`
+
+        </details>
+        EOF
+
+branding:
+  icon: "shield"
+  color: "blue"

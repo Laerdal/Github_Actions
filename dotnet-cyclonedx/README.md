@@ -154,57 +154,58 @@ jobs:
 
 ## 📋 Inputs
 
-| Input | Description | Required | Default | Example |
-|-------|-------------|----------|---------|---------|
-| `path` | Path to .sln, .csproj, packages.config file or directory | ❌ No | `""` | `./src/MyProject.csproj` |
-| `working-directory` | Working directory for command execution | ❌ No | `"."` | `./backend` |
-| `framework` | Target framework to use | ❌ No | `""` | `net8.0`, `net6.0` |
-| `runtime` | Target runtime identifier | ❌ No | `""` | `win-x64`, `linux-x64` |
-| `output` | Directory to write the SBOM | ❌ No | `""` | `./sbom`, `./artifacts` |
-| `filename` | Custom filename for the SBOM | ❌ No | `""` | `software-bom.xml`, `app-sbom.json` |
-| `output-format` | SBOM output format | ❌ No | `"Auto"` | `Auto`, `Json`, `UnsafeJson`, `Xml` |
-| `exclude-dev` | Exclude development dependencies | ❌ No | `"false"` | `true`, `false` |
-| `exclude-test-projects` | Exclude test projects | ❌ No | `"false"` | `true`, `false` |
-| `recursive` | Recursively scan project references | ❌ No | `"false"` | `true`, `false` |
-| `no-serial-number` | Omit serial number from SBOM | ❌ No | `"false"` | `true`, `false` |
-| `enable-github-licenses` | Enable GitHub license resolution | ❌ No | `"false"` | `true`, `false` |
-| `github-username` | GitHub username for license resolution | ❌ No | `""` | `myusername` |
-| `github-token` | GitHub personal access token | ❌ No | `""` | `${{ secrets.GITHUB_TOKEN }}` |
-| `github-bearer-token` | GitHub bearer token (recommended) | ❌ No | `""` | `${{ secrets.GITHUB_TOKEN }}` |
-| `url` | Alternative NuGet repository URL | ❌ No | `""` | `https://nuget.example.com/v3/index.json` |
-| `baseUrlUsername` | Alternative NuGet repository username | ❌ No | `""` | `nuget-user` |
-| `baseUrlUserPassword` | Alternative NuGet repository password | ❌ No | `""` | `${{ secrets.NUGET_PASSWORD }}` |
-| `isBaseUrlPasswordClearText` | NuGet password is cleartext | ❌ No | `"false"` | `true`, `false` |
-| `disable-package-restore` | Disable package restore | ❌ No | `"false"` | `true`, `false` |
-| `disable-hash-computation` | Disable hash computation | ❌ No | `"false"` | `true`, `false` |
-| `dotnet-command-timeout` | Command timeout in milliseconds | ❌ No | `"300000"` | `600000`, `900000` |
-| `include-project-references` | Include project references as components | ❌ No | `"false"` | `true`, `false` |
-| `set-name` | Override BOM component name | ❌ No | `""` | `MyApplication` |
-| `set-version` | Override BOM component version | ❌ No | `""` | `1.0.0`, `2.1.3` |
-| `set-type` | Override BOM component type | ❌ No | `"Application"` | `Library`, `Framework` |
-| `set-nuget-purl` | Override BOM ref and PURL as NuGet package | ❌ No | `"false"` | `true`, `false` |
-| `exclude-filter` | Dependencies to exclude (name@version) | ❌ No | `""` | `TestLib@1.0.0,MockFramework@2.0.0` |
-| `base-intermediate-output-path` | Custom build environment folder | ❌ No | `""` | `./custom-obj` |
-| `import-metadata-path` | Metadata template file path | ❌ No | `""` | `./templates/metadata.json` |
-| `global` | Install CycloneDX global tool if needed | ❌ No | `"true"` | `true`, `false` |
-| `show-summary` | Display action summary | ❌ No | `"false"` | `true`, `false` |
+| Input                           | Description                                              | Required | Default         | Example                                   |
+|---------------------------------|----------------------------------------------------------|----------|-----------------|-------------------------------------------|
+| `path`                          | Path to .sln, .csproj, packages.config file or directory | ❌ No     | `""`            | `./src/MyProject.csproj`                  |
+| `working-directory`             | Working directory for command execution                  | ❌ No     | `"."`           | `./backend`                               |
+| `framework`                     | Target framework to use                                  | ❌ No     | `""`            | `net8.0`, `net6.0`                        |
+| `runtime`                       | Target runtime identifier                                | ❌ No     | `""`            | `win-x64`, `linux-x64`                    |
+| `output`                        | Directory to write the SBOM                              | ❌ No     | `""`            | `./sbom`, `./artifacts`                   |
+| `filename`                      | Custom filename for the SBOM                             | ❌ No     | `""`            | `software-bom.xml`, `app-sbom.json`       |
+| `output-format`                 | SBOM output format                                       | ❌ No     | `"Auto"`        | `Auto`, `Json`, `UnsafeJson`, `Xml`       |
+| `exclude-dev`                   | Exclude development dependencies                         | ❌ No     | `"false"`       | `true`, `false`                           |
+| `exclude-test-projects`         | Exclude test projects                                    | ❌ No     | `"false"`       | `true`, `false`                           |
+| `recursive`                     | Recursively scan project references                      | ❌ No     | `"false"`       | `true`, `false`                           |
+| `no-serial-number`              | Omit serial number from SBOM                             | ❌ No     | `"false"`       | `true`, `false`                           |
+| `enable-github-licenses`        | Enable GitHub license resolution                         | ❌ No     | `"false"`       | `true`, `false`                           |
+| `github-username`               | GitHub username for license resolution                   | ❌ No     | `""`            | `myusername`                              |
+| `github-token`                  | GitHub personal access token                             | ❌ No     | `""`            | `${{ secrets.GITHUB_TOKEN }}`             |
+| `github-bearer-token`           | GitHub bearer token (recommended)                        | ❌ No     | `""`            | `${{ secrets.GITHUB_TOKEN }}`             |
+| `url`                           | Alternative NuGet repository URL                         | ❌ No     | `""`            | `https://nuget.example.com/v3/index.json` |
+| `baseUrlUsername`               | Alternative NuGet repository username                    | ❌ No     | `""`            | `nuget-user`                              |
+| `baseUrlUserPassword`           | Alternative NuGet repository password                    | ❌ No     | `""`            | `${{ secrets.NUGET_PASSWORD }}`           |
+| `isBaseUrlPasswordClearText`    | NuGet password is cleartext                              | ❌ No     | `"false"`       | `true`, `false`                           |
+| `disable-package-restore`       | Disable package restore                                  | ❌ No     | `"false"`       | `true`, `false`                           |
+| `disable-hash-computation`      | Disable hash computation                                 | ❌ No     | `"false"`       | `true`, `false`                           |
+| `dotnet-command-timeout`        | Command timeout in milliseconds                          | ❌ No     | `"300000"`      | `600000`, `900000`                        |
+| `include-project-references`    | Include project references as components                 | ❌ No     | `"false"`       | `true`, `false`                           |
+| `set-name`                      | Override BOM component name                              | ❌ No     | `""`            | `MyApplication`                           |
+| `set-version`                   | Override BOM component version                           | ❌ No     | `""`            | `1.0.0`, `2.1.3`                          |
+| `set-type`                      | Override BOM component type                              | ❌ No     | `"Application"` | `Library`, `Framework`                    |
+| `set-nuget-purl`                | Override BOM ref and PURL as NuGet package               | ❌ No     | `"false"`       | `true`, `false`                           |
+| `spec-version`                  | CycloneDX spec version to use (tool default when unset)  | ❌ No     | `""`            | `1.5`, `1.6`, `1.7`                       |
+| `exclude-filter`                | Dependencies to exclude (name@version)                   | ❌ No     | `""`            | `TestLib@1.0.0,MockFramework@2.0.0`       |
+| `base-intermediate-output-path` | Custom build environment folder                          | ❌ No     | `""`            | `./custom-obj`                            |
+| `import-metadata-path`          | Metadata template file path                              | ❌ No     | `""`            | `./templates/metadata.json`               |
+| `global`                        | Install CycloneDX global tool if needed                  | ❌ No     | `"true"`        | `true`, `false`                           |
+| `show-summary`                  | Display action summary                                   | ❌ No     | `"false"`       | `true`, `false`                           |
 
 ## 📤 Outputs
 
-| Output | Description | Type | Example |
-|--------|-------------|------|---------|
-| `exit-code` | Exit code of the CycloneDX command | `string` | `0`, `1` |
-| `executed-command` | Full command that was executed | `string` | `dotnet tool run CycloneDX ./src --output-format Json` |
-| `sbom-path` | Path to the generated SBOM file | `string` | `./sbom/bom.json` |
-| `is-sbom-generated` | Whether SBOM was successfully generated | `string` | `true`, `false` |
+| Output              | Description                             | Type     | Example                                                |
+|---------------------|-----------------------------------------|----------|--------------------------------------------------------|
+| `exit-code`         | Exit code of the CycloneDX command      | `string` | `0`, `1`                                               |
+| `executed-command`  | Full command that was executed          | `string` | `dotnet tool run CycloneDX ./src --output-format Json` |
+| `sbom-path`         | Path to the generated SBOM file         | `string` | `./sbom/bom.json`                                      |
+| `is-sbom-generated` | Whether SBOM was successfully generated | `string` | `true`, `false`                                        |
 
 ## 🔗 Related Actions
 
-| Action | Purpose | Repository |
-|--------|---------|------------|
-| 🚀 **dotnet** | Execute .NET CLI commands | `laerdal/github_actions/dotnet` |
+| Action                     | Purpose                   | Repository                                   |
+|----------------------------|---------------------------|----------------------------------------------|
+| 🚀 **dotnet**              | Execute .NET CLI commands | `laerdal/github_actions/dotnet`              |
 | 🔧 **dotnet-tool-install** | Install .NET global tools | `laerdal/github_actions/dotnet-tool-install` |
-| 🧪 **dotnet-test** | Enhanced .NET testing | `laerdal/github_actions/dotnet-test` |
+| 🧪 **dotnet-test**         | Enhanced .NET testing     | `laerdal/github_actions/dotnet-test`         |
 
 ## 💡 Examples
 
@@ -296,24 +297,24 @@ steps:
 
 ## 🔧 Output Format Support
 
-| Format | Description | File Extension | Use Case |
-|--------|-------------|----------------|----------|
-| `Auto` | Automatically detects based on filename | `.xml` or `.json` | Default, flexible |
-| `Xml` | CycloneDX XML format | `.xml` | Standards compliance |
-| `Json` | CycloneDX JSON format | `.json` | API integration |
-| `UnsafeJson` | JSON with relaxed escaping | `.json` | Special characters |
+| Format       | Description                             | File Extension    | Use Case             |
+|--------------|-----------------------------------------|-------------------|----------------------|
+| `Auto`       | Automatically detects based on filename | `.xml` or `.json` | Default, flexible    |
+| `Xml`        | CycloneDX XML format                    | `.xml`            | Standards compliance |
+| `Json`       | CycloneDX JSON format                   | `.json`           | API integration      |
+| `UnsafeJson` | JSON with relaxed escaping              | `.json`           | Special characters   |
 
 ## 🎯 Component Types
 
-| Type | Description | Example Use Case |
-|------|-------------|------------------|
-| `Application` | Standalone application | Web apps, desktop apps |
-| `Library` | Reusable library | NuGet packages, class libraries |
-| `Framework` | Development framework | ASP.NET Core, Entity Framework |
-| `Container` | Container image | Docker containers |
-| `Operating_System` | OS components | Linux distributions |
-| `Device` | Hardware device | IoT devices |
-| `Firmware` | Device firmware | Embedded systems |
+| Type               | Description            | Example Use Case                |
+|--------------------|------------------------|---------------------------------|
+| `Application`      | Standalone application | Web apps, desktop apps          |
+| `Library`          | Reusable library       | NuGet packages, class libraries |
+| `Framework`        | Development framework  | ASP.NET Core, Entity Framework  |
+| `Container`        | Container image        | Docker containers               |
+| `Operating_System` | OS components          | Linux distributions             |
+| `Device`           | Hardware device        | IoT devices                     |
+| `Firmware`         | Device firmware        | Embedded systems                |
 
 ## 🐛 Troubleshooting
 

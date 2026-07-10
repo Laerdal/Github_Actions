@@ -130,6 +130,10 @@ inputs:
     description: "Override the default BOM metadata component bom ref and PURL as NuGet package"
     required: false
     default: "false"
+  spec-version:
+    description: "Which version of the CycloneDX spec to use (1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7). If not set, the CycloneDX tool default is used"
+    required: false
+    default: ""
   exclude-filter:
     description: "Comma separated list of dependencies to exclude (e.g., 'name1@version1,name2@version2')"
     required: false
@@ -267,6 +271,19 @@ runs:
 
         echo "✅ Component type validation completed successfully"
 
+    - name: "✅ Validate input : spec-version"
+      if: ${{ inputs.spec-version != '' }}
+      shell: bash
+      run: |
+        echo "::debug::Validating spec-version input: ${{ inputs.spec-version }}"
+
+        case "${{ inputs.spec-version }}" in
+          1.0|1.1|1.2|1.3|1.4|1.5|1.6|1.7) ;;
+          *) echo "::error::Invalid spec-version. Must be one of: 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7"; exit 1 ;;
+        esac
+
+        echo "✅ Spec version validation completed successfully"
+
     - name: "✅ Validate input : exclude-filter"
       if: ${{ inputs.exclude-filter != '' }}
       shell: bash
@@ -389,7 +406,7 @@ runs:
         fi
 
         # Key-value options
-        for param in filename url baseUrlUsername baseUrlUserPassword dotnet-command-timeout base-intermediate-output-path import-metadata-path set-name set-version exclude-filter; do
+        for param in filename url baseUrlUsername baseUrlUserPassword dotnet-command-timeout base-intermediate-output-path import-metadata-path set-name set-version spec-version exclude-filter; do
           case $param in
             filename) value="${{ steps.normalize-filename.outputs.normalized }}" ;;
             url) value="${{ inputs.url }}" ;;
@@ -400,6 +417,7 @@ runs:
             import-metadata-path) value="${{ steps.normalize-import-metadata-path.outputs.normalized }}" ;;
             set-name) value="${{ inputs.set-name }}" ;;
             set-version) value="${{ inputs.set-version }}" ;;
+            spec-version) value="${{ inputs.spec-version }}" ;;
             exclude-filter) value="${{ inputs.exclude-filter }}" ;;
           esac
           if [ -n "$value" ] ; then
@@ -561,6 +579,7 @@ runs:
         | 🏷️ Component Name | `${{ inputs.set-name || 'auto-generated' }}` |
         | 📌 Component Version | `${{ inputs.set-version || '0.0.0' }}` |
         | 🏗️ Component Type | `${{ inputs.set-type }}` |
+        | 📐 Spec Version | `${{ inputs.spec-version || 'tool default' }}` |
 
         ## ⚙️ Process Details
         | Step | Status |
@@ -593,68 +612,55 @@ branding:
 # dotnet cyclonedx --help
 # Description:
 #   A .NET Core global tool which creates CycloneDX Software Bill-of-Materials (SBOM) from .NET projects.
-
+# 
 # Usage:
-#   CycloneDX <path> [options]
-
+#   CycloneDX [<path>] [options]
+# 
 # Arguments:
-#   <path>  The path to a .sln, .slnf, .slnx, .csproj, .fsproj, .vbproj, .xsproj, or packages.config file or the path to a directory which will be
-#           recursively analyzed for packages.config files.
-
+#   <path>  The path to a .sln, .slnf, .slnx, .csproj, .fsproj, .vbproj, .xsproj, or packages.config file or the path to a directory which will be recursively analyzed for packages.config files.
+# 
 # Options:
-#   --framework <framework>                                                The target framework to use. If not defined, all will be aggregated.
-#   --runtime <runtime>                                                     The runtime to use. If not defined, all will be aggregated.
-#   --output <output>                                                        The directory to write the BOM
-#   --filename <filename>                                                   Optionally provide a filename for the BOM (default: bom.xml or bom.json)
-#   --json                                                                   (Deprecated use `--output-format json` instead) Produce a JSON BOM instead
-#                                                                                of XML
-#   --exclude-dev                                                           Exclude development dependencies from the BOM (see
-#                                                                                https://github.com/NuGet/Home/wiki/DevelopmentDependency-support-for-Package
-#                                                                                Reference)
-#   --exclude-test-projects                                                  Exclude test projects from the BOM
-#   --url <url>                                                              Alternative NuGet repository URL to
-#                                                                                https://<yoururl>/nuget/<yourrepository>/v3/index.json
-#   --baseUrlUsername <baseUrlUsername>                                     Alternative NuGet repository username
-#   --baseUrlUserPassword <baseUrlUserPassword>                            Alternative NuGet repository username password/apikey
-#   --isBaseUrlPasswordClearText                                         Alternative NuGet repository password is cleartext
-#   --recursive                                                             To be used with a single project file, it will recursively scan project
-#                                                                                references of the supplied project file
-#   --no-serial-number                                                      Optionally omit the serial number from the resulting BOM
-#   --github-username <github-username>                                     Optionally provide a GitHub username for license resolution. If set you
-#                                                                                also need to provide a GitHub personal access token
-#   --github-token <github-token>                                           Optionally provide a GitHub personal access token for license resolution.
-#                                                                                If set you also need to provide a GitHub username
-#   --github-bearer-token <github-bearer-token>                            Optionally provide a GitHub bearer token for license resolution. This is
-#                                                                                useful in GitHub actions
-#   --enable-github-licenses                                               Enables GitHub license resolution
-#   --disable-package-restore                                              Optionally disable package restore
-#   --disable-hash-computation                                             Optionally disable hash computation for packages
-#   --dotnet-command-timeout <dotnet-command-timeout>                      dotnet command timeout in milliseconds (primarily used for long dotnet
-#                                                                                restore operations) [default: 300000]
-#   --base-intermediate-output-path <base-intermediate-output-path>       Optionally provide a folder for customized build environment. Required if
-#                                                                                folder 'obj' is relocated.
-#   --import-metadata-path <import-metadata-path>                          Optionally provide a metadata template which has project specific details.
-#   --include-project-references                                           Include project references as components (can only be used with project
-#                                                                                files).
-#   --set-name <set-name>                                                   Override the autogenerated BOM metadata component name.
-#   --set-version <set-version>                                             Override the default BOM metadata component version (defaults to 0.0.0).
-#   --set-type                                                              Override the default BOM metadata component type (defaults to application).
-#   <Application|Container|Cryptographic_Asset|Data|Device|Device_Driver|File|F  [default: Application]
-#   irmware|Framework|Library|Machine_Learning_Model|Null|Operating_System|Plat
-#   form>
-#   --set-nuget-purl                                                             Override the default BOM metadata component bom ref and PURL as NuGet
-#                                                                                package.
-#   -f <f>                                                                       (Deprecated use -fn instead) Optionally provide a filename for the BOM
-#                                                                                (default: bom.xml or bom.json).
-#   -d                                                                           (Deprecated use -ed instead) Exclude development dependencies from the BOM.
-#   -r                                                                           (Deprecated use -rs instead) To be used with a single project file, it will
-#                                                                                recursively scan project references of the supplied project file.
-#   --out <out>                                                                  (Deprecated use -output instead) The directory to write the BOM
-#   --disable-github-licenses                                              (Deprecated, this is the default setting now
-#   --exclude-filter <exclude-filter>                                       A comma separated list of dependencies to exclude in form
-#                                                                                'name1@version1,name2@version2'. Transitive dependencies will also be
-#                                                                                removed.
-#   --output-format <Auto|Json|UnsafeJson|Xml>                               Select the BOM output format: auto (default), xml, json, or unsafeJson
-#                                                                                (relaxed escaping). [default: Auto]
-#   --version                                                                    Show version information
-#   -h, --help                                                               Show help and usage information
+#   -tfm, --framework <framework>                                                                                                                             The target framework to use. If not defined, all will be aggregated.
+#   -rt, --runtime <runtime>                                                                                                                                  The runtime to use. If not defined, all will be aggregated.
+#   -o, --output <output>                                                                                                                                     The directory to write the BOM
+#   -fn, --filename <filename>                                                                                                                                Optionally provide a filename for the BOM (default: bom.xml or bom.json)
+#   -ed, --exclude-dev                                                                                                                                        Exclude development dependencies from the BOM (see https://github.com/NuGet/Home/wiki/DevelopmentDependency-support-for-PackageReference)
+#   -t, --exclude-test-projects                                                                                                                               Exclude test projects from the BOM
+#   -u, --url <url>                                                                                                                                           Alternative NuGet repository URL to https://<yoururl>/nuget/<yourrepository>/v3/index.json
+#   -us, --baseUrlUsername <baseUrlUsername>                                                                                                                  Alternative NuGet repository username. Falls back to the CYCLONEDX_NUGET_USERNAME environment variable.
+#   -usp, --baseUrlUserPassword <baseUrlUserPassword>                                                                                                         Alternative NuGet repository username password/apikey. Falls back to the CYCLONEDX_NUGET_PASSWORD environment variable.
+#   -uspct, --isBaseUrlPasswordClearText                                                                                                                      Alternative NuGet repository password is cleartext
+#   -rs, --recursive                                                                                                                                          To be used with a single project file, it will recursively scan project references of the supplied project file
+#   -ns, --no-serial-number                                                                                                                                   Optionally omit the serial number from the resulting BOM
+#   -gu, --github-username <github-username>                                                                                                                  Optionally provide a GitHub username for license resolution. If set you also need to provide a GitHub personal access token. Falls back to the
+#   CYCLONEDX_GITHUB_USERNAME environment variable.
+#   -gt, --github-token <github-token>                                                                                                                        Optionally provide a GitHub personal access token for license resolution. If set you also need to provide a GitHub username. Falls back to the
+#   CYCLONEDX_GITHUB_TOKEN environment variable.                                       ^^
+#   -gbt, --github-bearer-token <github-bearer-token>                                                                                                         Optionally provide a GitHub bearer token for license resolution. This is useful in GitHub actions. Falls back to the CYCLONEDX_GITHUB_BEARER_TOKEN or
+#   GITHUB_TOKEN environment variables.
+#   -egl, --enable-github-licenses                                                                                                                            Enables GitHub license resolution
+#   -dpr, --disable-package-restore                                                                                                                           Optionally disable package restore
+#   -dhc, --disable-hash-computation                                                                                                                          Optionally disable hash computation for packages
+#   -ilt, --include-license-text                                                                                                                              Embed license file contents as base64-encoded text in the BOM for packages that declare a license file in their package (via <license type="file"> in
+#   the nuspec)
+#   -dct, --dotnet-command-timeout <dotnet-command-timeout>                                                                                                   dotnet command timeout in milliseconds (primarily used for long dotnet restore operations) [default: 300000]
+#   -biop, --base-intermediate-output-path <base-intermediate-output-path>                                                                                    Optionally provide a folder for customized build environment. Required if folder 'obj' is relocated.
+#   -imp, --import-metadata-path <import-metadata-path>                                                                                                       Optionally provide a metadata template which has project specific details.
+#   -ipr, --include-project-references                                                                                                                        Include project references as components (can only be used with project files).
+#   -sn, --set-name <set-name>                                                                                                                                Override the autogenerated BOM metadata component name.
+#   -sv, --set-version <set-version>                                                                                                                          Override the default BOM metadata component version (defaults to 0.0.0).
+#   -st, --set-type                                                                                                                                           Override the default BOM metadata component type (defaults to application). [default: Application]
+#   <Application|Container|Cryptographic_Asset|Data|Device|Device_Driver|File|Firmware|Framework|Library|Machine_Learning_Model|Null|Operating_System|Platfo
+#   rm>
+#   --set-nuget-purl                                                                                                                                          Override the default BOM metadata component bom ref and PURL as NuGet package.
+#   -spv, --spec-version <1.0|1.1|1.2|1.3|1.4|1.5|1.6|1.7>                                                                                                    Which version of CycloneDX spec to use. [default: 1.7]
+#   -ef, --exclude-filter <exclude-filter>                                                                                                                    A comma separated list of dependencies to exclude in form 'name1@version1,name2@version2' or 'name1,name2' (to exclude all versions). Transitive
+#   dependencies will also be removed.
+#   -F, --output-format <Auto|Json|UnsafeJson|Xml>                                                                                                            Select the BOM output format: auto (default), xml, json, or unsafeJson (relaxed escaping).
+#   -c, --configuration <configuration>                                                                                                                       The MSBuild configuration to use when restoring packages (e.g. Debug, Release). When set, the configuration is passed to dotnet restore so that
+#   conditional PackageReferences (e.g. Condition="'$(Configuration)' == 'Debug'") are evaluated correctly.
+#   --out <out>                                                                                                                                               (Deprecated use --output instead) The directory to write the BOM
+#   --json                                                                                                                                                    (Deprecated use --output-format instead) Output in JSON format
+#   -?, -h, --help                                                                                                                                            Show help and usage information
+#   --version                                                                                                                                                 Show version information
+# 

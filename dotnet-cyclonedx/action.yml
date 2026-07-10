@@ -130,7 +130,7 @@ inputs:
     description: "Override the default BOM metadata component bom ref and PURL as NuGet package"
     required: false
     default: "false"
-  spec-version:
+  set-spec-version:
     description: "Which version of the CycloneDX spec to use (1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7). If not set, the CycloneDX tool default is used"
     required: false
     default: ""
@@ -271,15 +271,15 @@ runs:
 
         echo "✅ Component type validation completed successfully"
 
-    - name: "✅ Validate input : spec-version"
-      if: ${{ inputs.spec-version != '' }}
+    - name: "✅ Validate input : set-spec-version"
+      if: ${{ inputs.set-spec-version != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating spec-version input: ${{ inputs.spec-version }}"
+        echo "::debug::Validating set-spec-version input: ${{ inputs.set-spec-version }}"
 
-        case "${{ inputs.spec-version }}" in
+        case "${{ inputs.set-spec-version }}" in
           1.0|1.1|1.2|1.3|1.4|1.5|1.6|1.7) ;;
-          *) echo "::error::Invalid spec-version. Must be one of: 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7"; exit 1 ;;
+          *) echo "::error::Invalid set-spec-version. Must be one of: 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7"; exit 1 ;;
         esac
 
         echo "✅ Spec version validation completed successfully"
@@ -406,7 +406,7 @@ runs:
         fi
 
         # Key-value options
-        for param in filename url baseUrlUsername baseUrlUserPassword dotnet-command-timeout base-intermediate-output-path import-metadata-path set-name set-version spec-version exclude-filter; do
+        for param in filename url baseUrlUsername baseUrlUserPassword dotnet-command-timeout base-intermediate-output-path import-metadata-path set-name set-version set-spec-version exclude-filter; do
           case $param in
             filename) value="${{ steps.normalize-filename.outputs.normalized }}" ;;
             url) value="${{ inputs.url }}" ;;
@@ -417,7 +417,7 @@ runs:
             import-metadata-path) value="${{ steps.normalize-import-metadata-path.outputs.normalized }}" ;;
             set-name) value="${{ inputs.set-name }}" ;;
             set-version) value="${{ inputs.set-version }}" ;;
-            spec-version) value="${{ inputs.spec-version }}" ;;
+            set-spec-version) value="${{ inputs.set-spec-version }}" ;;
             exclude-filter) value="${{ inputs.exclude-filter }}" ;;
           esac
           if [ -n "$value" ] ; then
@@ -579,7 +579,7 @@ runs:
         | 🏷️ Component Name | `${{ inputs.set-name || 'auto-generated' }}` |
         | 📌 Component Version | `${{ inputs.set-version || '0.0.0' }}` |
         | 🏗️ Component Type | `${{ inputs.set-type }}` |
-        | 📐 Spec Version | `${{ inputs.spec-version || 'tool default' }}` |
+        | 📐 Spec Version | `${{ inputs.set-spec-version || 'tool default' }}` |
 
         ## ⚙️ Process Details
         | Step | Status |

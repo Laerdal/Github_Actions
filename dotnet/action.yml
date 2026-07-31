@@ -270,25 +270,26 @@ runs:
       run: |
         echo "::debug::Building argument list..."
 
-        # Define command support maps (cached for performance)
-        declare -A COMMAND_SUPPORT=(
-          ["verbosity"]="build|restore|pack|publish|test|clean|msbuild|workload"
-          ["configuration"]="build|publish|test|pack|run"
-          ["framework"]="build|publish|test|pack|run"
-          ["runtime"]="build|publish|test|pack|run"
-          ["arch"]="build|publish|run"
-          ["output"]="build|publish|pack|run|tool"
-          ["nologo"]="build|restore|pack|publish|test|clean|msbuild|run|add|remove|list"
-          ["no-restore"]="build|test|publish|pack"
-          ["no-build"]="test|publish"
-          ["artifacts-path"]="build|restore|publish|pack|test|clean|run"
-        )
-
-        # Function to check command support
+        # Function to check command support. Uses a case statement rather than an
+        # associative array (`declare -A`) because macOS runners ship Apple's system
+        # Bash 3.2 (frozen pre-GPLv3), which does not support `declare -A` at all.
         supports_option() {
           local option="$1"
           local command="${{ inputs.command }}"
-          echo "$command" | grep -iqE "^(${COMMAND_SUPPORT[$option]})$"
+          local pattern=""
+          case "$option" in
+            verbosity)      pattern="build|restore|pack|publish|test|clean|msbuild|workload" ;;
+            configuration)  pattern="build|publish|test|pack|run" ;;
+            framework)      pattern="build|publish|test|pack|run" ;;
+            runtime)        pattern="build|publish|test|pack|run" ;;
+            arch)           pattern="build|publish|run" ;;
+            output)         pattern="build|publish|pack|run|tool" ;;
+            nologo)         pattern="build|restore|pack|publish|test|clean|msbuild|run|add|remove|list" ;;
+            no-restore)     pattern="build|test|publish|pack" ;;
+            no-build)       pattern="test|publish" ;;
+            artifacts-path) pattern="build|restore|publish|pack|test|clean|run" ;;
+          esac
+          echo "$command" | grep -iqE "^($pattern)$"
         }
 
         # Start building arguments

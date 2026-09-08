@@ -356,10 +356,21 @@ runs:
         FULL_COMMAND="dotnet ${{ steps.build-args.outputs.arguments }}"
         echo "::debug::Final command: $FULL_COMMAND"
 
-        # Execute the command using eval for proper argument handling
+        # Execute the command using eval for proper argument handling.
+        # NOTE: this step runs under `set -e` (GitHub Actions' default shell options for
+        # composite `shell: bash` steps). Running eval as a bare statement would let `-e`
+        # abort the script the moment the command fails, skipping every line below -
+        # including the `exit-code`/`executed-command` GITHUB_OUTPUT writes - which left
+        # those outputs empty on any failure and broke downstream consumers (e.g. the
+        # "Verify command execution" step below, and dotnet-nuget-upload's own
+        # "Verify package upload" step). Guarding the eval in an if/else keeps `-e` from
+        # firing so we always capture the real exit code.
         echo "✅ Executing: $FULL_COMMAND"
-        eval "$FULL_COMMAND"
-        EXIT_CODE=$?
+        if eval "$FULL_COMMAND"; then
+          EXIT_CODE=0
+        else
+          EXIT_CODE=$?
+        fi
 
         # Enhanced status reporting
         if [ $EXIT_CODE -eq 0 ]; then

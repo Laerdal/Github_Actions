@@ -27,7 +27,7 @@ concurrency:
 
 jobs:
   version:
-    uses: laerdal/github_actions/.github/workflows/reusable-version.yml@main
+    uses: ./.github/workflows/reusable-version.yml
     with:
       config-file: "./.config/version.json"
       output-txt: 'output/version/version.txt'
@@ -48,7 +48,7 @@ jobs:
 
       - name: '📚 Build Documentation'
         id: docfx
-        uses: laerdal/github_actions/dotnet-docfx-build@main
+        uses: ./dotnet-docfx-build
         with:
           config: 'docfx.json'
           output: 'output/docs/site'
@@ -81,7 +81,7 @@ jobs:
           fetch-depth: 0
 
       - name: '🏷️ Create Git Tag'
-        uses: laerdal/github_actions/git-tag@main
+        uses: ./git-tag
         with:
           tag: ${{ needs.version.outputs.version-full }}
           message: 'Release ${{ needs.version.outputs.version-full }}'
@@ -99,7 +99,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: '🚀 Create GitHub Release'
-        uses: laerdal/github_actions/github-release@main
+        uses: ./github-release
         with:
           tag: ${{ needs.version.outputs.version-fortag }}
           title: 'Release ${{ needs.version.outputs.version-full }}'

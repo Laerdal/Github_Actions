@@ -241,6 +241,14 @@ All actions follow consistent design patterns:
 - **📊 Summaries** - Optional detailed execution summaries
 - **🎨 Consistent Styling** - Emoji-based naming and clear descriptions
 
+### 🔗 Internal Action References
+
+Pin the actions you consume to a full-length commit SHA with the release tag in a comment, for example `uses: Laerdal/Github_Actions/git-tag@<full-length-sha> # vX.Y.Z`. Dependabot updates the SHA and the comment together.
+
+Composite actions in this repository call their sibling actions as `Laerdal/Github_Actions/<action>@main`, and `reusable-version.yml` calls `generate-version@main` the same way. A commit cannot contain its own hash, and `./` inside a composite action or reusable workflow resolves against the caller's workspace, so these inner references cannot be pinned: they follow `main` whatever SHA the caller pinned. A change to a sibling action on `main` therefore reaches every consumer of a composite that calls it, so keep `main` releasable.
+
+Apart from that, workflows in this repository call its actions through local `./<action>` paths and test the code of the commit they run on.
+
 ## 🤝 Contributing
 
 1. **Fork** the repository

@@ -116,11 +116,13 @@ runs:
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        if [ -n "${{ inputs.github-token }}" ]; then
-          echo "::add-mask::${{ inputs.github-token }}"
+        if [ -n "${INPUT_GITHUB_TOKEN}" ]; then
+          echo "::add-mask::${INPUT_GITHUB_TOKEN}"
         fi
 
         echo "::debug::Masked sensitive inputs"
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
 
     # ================== 📁 ==================
 
@@ -144,13 +146,13 @@ runs:
         echo "::debug::Validating boolean inputs..."
         for param in notes-from-tag generate-notes draft prerelease verify-tag fail-on-no-commits show-summary; do
           case $param in
-            notes-from-tag) value="${{ inputs.notes-from-tag }}" ;;
-            generate-notes) value="${{ inputs.generate-notes }}" ;;
-            draft) value="${{ inputs.draft }}" ;;
-            prerelease) value="${{ inputs.prerelease }}" ;;
-            verify-tag) value="${{ inputs.verify-tag }}" ;;
-            fail-on-no-commits) value="${{ inputs.fail-on-no-commits }}" ;;
-            show-summary) value="${{ inputs.show-summary }}" ;;
+            notes-from-tag) value="${INPUT_NOTES_FROM_TAG}" ;;
+            generate-notes) value="${INPUT_GENERATE_NOTES}" ;;
+            draft) value="${INPUT_DRAFT}" ;;
+            prerelease) value="${INPUT_PRERELEASE}" ;;
+            verify-tag) value="${INPUT_VERIFY_TAG}" ;;
+            fail-on-no-commits) value="${INPUT_FAIL_ON_NO_COMMITS}" ;;
+            show-summary) value="${INPUT_SHOW_SUMMARY}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -159,73 +161,91 @@ runs:
         done
 
         echo "✅ Boolean inputs validation completed successfully"
+      env:
+        INPUT_NOTES_FROM_TAG: ${{ inputs.notes-from-tag }}
+        INPUT_GENERATE_NOTES: ${{ inputs.generate-notes }}
+        INPUT_DRAFT: ${{ inputs.draft }}
+        INPUT_PRERELEASE: ${{ inputs.prerelease }}
+        INPUT_VERIFY_TAG: ${{ inputs.verify-tag }}
+        INPUT_FAIL_ON_NO_COMMITS: ${{ inputs.fail-on-no-commits }}
+        INPUT_SHOW_SUMMARY: ${{ inputs.show-summary }}
 
 
     - name: "✅ Validate input : latest"
       if: ${{ inputs.latest != '' && inputs.latest != 'auto' }}
       shell: bash
       run: |
-        echo "::debug::Validating latest input: ${{ inputs.latest }}"
+        echo "::debug::Validating latest input: ${INPUT_LATEST}"
 
-        case "${{ inputs.latest }}" in
+        case "${INPUT_LATEST}" in
           true|false|auto) ;;
           *) echo "::error::latest must be 'true', 'false', or 'auto'"; exit 1 ;;
         esac
 
         echo "✅ Latest parameter validation completed successfully"
+      env:
+        INPUT_LATEST: ${{ inputs.latest }}
 
     - name: "✅ Validate input : notes-file"
       if: ${{ inputs.notes-file != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating notes-file input: ${{ steps.normalize-notes-file.outputs.normalized }}"
+        echo "::debug::Validating notes-file input: ${STEP_NORMALIZE_NOTES_FILE_NORMALIZED}"
 
-        if [ ! -f "${{ steps.normalize-notes-file.outputs.normalized }}" ]; then
-          echo "::error file=${{ steps.normalize-notes-file.outputs.normalized }}::Notes file not found: ${{ steps.normalize-notes-file.outputs.normalized }}"
+        if [ ! -f "${STEP_NORMALIZE_NOTES_FILE_NORMALIZED}" ]; then
+          echo "::error file=${STEP_NORMALIZE_NOTES_FILE_NORMALIZED}::Notes file not found: ${STEP_NORMALIZE_NOTES_FILE_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Notes file validation completed successfully"
+      env:
+        STEP_NORMALIZE_NOTES_FILE_NORMALIZED: ${{ steps.normalize-notes-file.outputs.normalized }}
 
     - name: "✅ Validate input : repo"
       if: ${{ inputs.repo != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating repo input: ${{ inputs.repo }}"
+        echo "::debug::Validating repo input: ${INPUT_REPO}"
 
-        if ! [[ "${{ inputs.repo }}" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
+        if ! [[ "${INPUT_REPO}" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]; then
           echo "::error::Invalid repository format. Must be OWNER/REPO"
           exit 1
         fi
 
         echo "✅ Repository format validation completed successfully"
+      env:
+        INPUT_REPO: ${{ inputs.repo }}
 
     - name: "✅ Validate input : tag"
       if: ${{ inputs.tag != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating tag input: ${{ inputs.tag }}"
+        echo "::debug::Validating tag input: ${INPUT_TAG}"
 
-        if [[ "${{ inputs.tag }}" =~ [[:space:]] ]]; then
+        if [[ "${INPUT_TAG}" =~ [[:space:]] ]]; then
           echo "::error::Tag name cannot contain spaces"
           exit 1
         fi
 
         echo "✅ Tag format validation completed successfully"
+      env:
+        INPUT_TAG: ${{ inputs.tag }}
 
     - name: "✅ Validate input : discussion-category"
       if: ${{ inputs.discussion-category != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating discussion-category input: ${{ inputs.discussion-category }}"
+        echo "::debug::Validating discussion-category input: ${INPUT_DISCUSSION_CATEGORY}"
 
         # Discussion category should be alphanumeric with hyphens and spaces allowed
-        if ! [[ "${{ inputs.discussion-category }}" =~ ^[a-zA-Z0-9\ \-]+$ ]]; then
+        if ! [[ "${INPUT_DISCUSSION_CATEGORY}" =~ ^[a-zA-Z0-9\ \-]+$ ]]; then
           echo "::error::Discussion category contains invalid characters. Use alphanumeric, spaces, and hyphens only"
           exit 1
         fi
 
         echo "✅ Discussion category validation completed successfully"
+      env:
+        INPUT_DISCUSSION_CATEGORY: ${{ inputs.discussion-category }}
 
     - name: "✅ Validate input : notes sources"
       shell: bash
@@ -234,10 +254,10 @@ runs:
 
         # Count how many notes sources are provided
         NOTES_COUNT=0
-        [ -n "${{ inputs.notes }}" ] && NOTES_COUNT=$((NOTES_COUNT + 1))
-        [ -n "${{ inputs.notes-file }}" ] && NOTES_COUNT=$((NOTES_COUNT + 1))
-        [ "${{ inputs.notes-from-tag }}" = "true" ] && NOTES_COUNT=$((NOTES_COUNT + 1))
-        [ "${{ inputs.generate-notes }}" = "true" ] && NOTES_COUNT=$((NOTES_COUNT + 1))
+        [ -n "${INPUT_NOTES}" ] && NOTES_COUNT=$((NOTES_COUNT + 1))
+        [ -n "${INPUT_NOTES_FILE}" ] && NOTES_COUNT=$((NOTES_COUNT + 1))
+        [ "${INPUT_NOTES_FROM_TAG}" = "true" ] && NOTES_COUNT=$((NOTES_COUNT + 1))
+        [ "${INPUT_GENERATE_NOTES}" = "true" ] && NOTES_COUNT=$((NOTES_COUNT + 1))
 
         if [ $NOTES_COUNT -gt 1 ]; then
           echo "::error::Multiple notes sources specified. Use only one of: notes, notes-file, notes-from-tag, or generate-notes"
@@ -247,6 +267,11 @@ runs:
         fi
 
         echo "✅ Notes sources validation completed successfully"
+      env:
+        INPUT_NOTES: ${{ inputs.notes }}
+        INPUT_NOTES_FILE: ${{ inputs.notes-file }}
+        INPUT_NOTES_FROM_TAG: ${{ inputs.notes-from-tag }}
+        INPUT_GENERATE_NOTES: ${{ inputs.generate-notes }}
 
     - name: "⚙️ Setup GitHub CLI"
       shell: bash
@@ -254,7 +279,7 @@ runs:
         echo "::debug::Setting up GitHub CLI authentication..."
 
         # Authenticate with GitHub CLI
-        echo "${{ inputs.github-token }}" | gh auth login --with-token
+        echo "${INPUT_GITHUB_TOKEN}" | gh auth login --with-token
 
         # Verify authentication
         if gh auth status >/dev/null 2>&1; then
@@ -264,6 +289,8 @@ runs:
           echo "::error::GitHub CLI authentication failed"
           exit 1
         fi
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
 
     # ================== 🏗️ ==================
 
@@ -277,13 +304,13 @@ runs:
         ARGUMENTS="release create"
 
         # Add tag if provided
-        if [ -n "${{ inputs.tag }}" ]; then
-          ARGUMENTS="$ARGUMENTS '${{ inputs.tag }}'"
+        if [ -n "${INPUT_TAG}" ]; then
+          ARGUMENTS="$ARGUMENTS '${INPUT_TAG}'"
         fi
 
         # Add asset files if provided
-        if [ -n "${{ inputs.assets }}" ]; then
-          NORMALIZED_ASSETS="${{ steps.normalize-assets.outputs.normalized }}"
+        if [ -n "${INPUT_ASSETS}" ]; then
+          NORMALIZED_ASSETS="${STEP_NORMALIZE_ASSETS_NORMALIZED}"
           if [ -n "$NORMALIZED_ASSETS" ]; then
             while IFS= read -r asset_file; do
               # Skip empty lines
@@ -294,38 +321,38 @@ runs:
         fi
 
         # Add repository if provided
-        if [ -n "${{ inputs.repo }}" ]; then
-          ARGUMENTS="$ARGUMENTS --repo '${{ inputs.repo }}'"
+        if [ -n "${INPUT_REPO}" ]; then
+          ARGUMENTS="$ARGUMENTS --repo '${INPUT_REPO}'"
         fi
 
         # Add title if provided
-        if [ -n "${{ inputs.title }}" ]; then
-          ARGUMENTS="$ARGUMENTS --title '${{ inputs.title }}'"
+        if [ -n "${INPUT_TITLE}" ]; then
+          ARGUMENTS="$ARGUMENTS --title '${INPUT_TITLE}'"
         fi
 
         # Add notes options (mutually exclusive)
-        if [ -n "${{ inputs.notes }}" ]; then
-          ARGUMENTS="$ARGUMENTS --notes '${{ inputs.notes }}'"
-        elif [ -n "${{ inputs.notes-file }}" ]; then
-          ARGUMENTS="$ARGUMENTS --notes-file '${{ steps.normalize-notes-file.outputs.normalized }}'"
-        elif [ "${{ inputs.notes-from-tag }}" = "true" ]; then
+        if [ -n "${INPUT_NOTES}" ]; then
+          ARGUMENTS="$ARGUMENTS --notes '${INPUT_NOTES}'"
+        elif [ -n "${INPUT_NOTES_FILE}" ]; then
+          ARGUMENTS="$ARGUMENTS --notes-file '${STEP_NORMALIZE_NOTES_FILE_NORMALIZED}'"
+        elif [ "${INPUT_NOTES_FROM_TAG}" = "true" ]; then
           ARGUMENTS="$ARGUMENTS --notes-from-tag"
-        elif [ "${{ inputs.generate-notes }}" = "true" ]; then
+        elif [ "${INPUT_GENERATE_NOTES}" = "true" ]; then
           ARGUMENTS="$ARGUMENTS --generate-notes"
         fi
 
         # Add notes start tag if provided
-        if [ -n "${{ inputs.notes-start-tag }}" ]; then
-          ARGUMENTS="$ARGUMENTS --notes-start-tag '${{ inputs.notes-start-tag }}'"
+        if [ -n "${INPUT_NOTES_START_TAG}" ]; then
+          ARGUMENTS="$ARGUMENTS --notes-start-tag '${INPUT_NOTES_START_TAG}'"
         fi
 
         # Add boolean flags
         for param in draft prerelease verify-tag fail-on-no-commits; do
           case $param in
-            draft) value="${{ inputs.draft }}" ;;
-            prerelease) value="${{ inputs.prerelease }}" ;;
-            verify-tag) value="${{ inputs.verify-tag }}" ;;
-            fail-on-no-commits) value="${{ inputs.fail-on-no-commits }}" ;;
+            draft) value="${INPUT_DRAFT}" ;;
+            prerelease) value="${INPUT_PRERELEASE}" ;;
+            verify-tag) value="${INPUT_VERIFY_TAG}" ;;
+            fail-on-no-commits) value="${INPUT_FAIL_ON_NO_COMMITS}" ;;
           esac
           if [ "$value" = "true" ]; then
             ARGUMENTS="$ARGUMENTS --${param}"
@@ -333,20 +360,20 @@ runs:
         done
 
         # Add latest flag
-        if [ "${{ inputs.latest }}" = "true" ]; then
+        if [ "${INPUT_LATEST}" = "true" ]; then
           ARGUMENTS="$ARGUMENTS --latest"
-        elif [ "${{ inputs.latest }}" = "false" ]; then
+        elif [ "${INPUT_LATEST}" = "false" ]; then
           ARGUMENTS="$ARGUMENTS --latest=false"
         fi
 
         # Add target if provided
-        if [ -n "${{ inputs.target }}" ]; then
-          ARGUMENTS="$ARGUMENTS --target '${{ inputs.target }}'"
+        if [ -n "${INPUT_TARGET}" ]; then
+          ARGUMENTS="$ARGUMENTS --target '${INPUT_TARGET}'"
         fi
 
         # Add discussion category if provided
-        if [ -n "${{ inputs.discussion-category }}" ]; then
-          ARGUMENTS="$ARGUMENTS --discussion-category '${{ inputs.discussion-category }}'"
+        if [ -n "${INPUT_DISCUSSION_CATEGORY}" ]; then
+          ARGUMENTS="$ARGUMENTS --discussion-category '${INPUT_DISCUSSION_CATEGORY}'"
         fi
 
         # Trim leading space
@@ -355,6 +382,25 @@ runs:
         echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
         echo "::debug::Argument list built successfully: $ARGUMENTS"
         echo "✅ Argument list built successfully"
+      env:
+        INPUT_TAG: ${{ inputs.tag }}
+        INPUT_ASSETS: ${{ inputs.assets }}
+        STEP_NORMALIZE_ASSETS_NORMALIZED: ${{ steps.normalize-assets.outputs.normalized }}
+        INPUT_REPO: ${{ inputs.repo }}
+        INPUT_TITLE: ${{ inputs.title }}
+        INPUT_NOTES: ${{ inputs.notes }}
+        INPUT_NOTES_FILE: ${{ inputs.notes-file }}
+        STEP_NORMALIZE_NOTES_FILE_NORMALIZED: ${{ steps.normalize-notes-file.outputs.normalized }}
+        INPUT_NOTES_FROM_TAG: ${{ inputs.notes-from-tag }}
+        INPUT_GENERATE_NOTES: ${{ inputs.generate-notes }}
+        INPUT_NOTES_START_TAG: ${{ inputs.notes-start-tag }}
+        INPUT_DRAFT: ${{ inputs.draft }}
+        INPUT_PRERELEASE: ${{ inputs.prerelease }}
+        INPUT_VERIFY_TAG: ${{ inputs.verify-tag }}
+        INPUT_FAIL_ON_NO_COMMITS: ${{ inputs.fail-on-no-commits }}
+        INPUT_LATEST: ${{ inputs.latest }}
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_DISCUSSION_CATEGORY: ${{ inputs.discussion-category }}
 
     # ================== 🚀 ==================
 
@@ -366,7 +412,7 @@ runs:
         echo "🚀 Creating GitHub release..."
 
         # Execute GitHub CLI command and capture output
-        if RELEASE_OUTPUT=$(eval "gh ${{ steps.build-args.outputs.arguments }}" 2>&1); then
+        if RELEASE_OUTPUT=$(eval "gh ${STEP_BUILD_ARGS_ARGUMENTS}" 2>&1); then
           echo "::debug::Release creation command executed successfully"
           echo "$RELEASE_OUTPUT"
 
@@ -382,8 +428,8 @@ runs:
 
             # Get additional release information via API
             REPO_PARAM=""
-            if [ -n "${{ inputs.repo }}" ]; then
-              REPO_PARAM="--repo ${{ inputs.repo }}"
+            if [ -n "${INPUT_REPO}" ]; then
+              REPO_PARAM="--repo ${INPUT_REPO}"
             fi
 
             # Get release info from GitHub API
@@ -403,7 +449,7 @@ runs:
           else
             echo "::warning::Could not extract release URL from output"
             echo "release-url=unknown" >> $GITHUB_OUTPUT
-            echo "release-tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+            echo "release-tag=${INPUT_TAG}" >> $GITHUB_OUTPUT
             echo "release-id=unknown" >> $GITHUB_OUTPUT
             echo "release-name=unknown" >> $GITHUB_OUTPUT
             echo "upload-url=unknown" >> $GITHUB_OUTPUT
@@ -414,6 +460,10 @@ runs:
           echo "::error title=Release creation failed::$RELEASE_OUTPUT"
           exit 1
         fi
+      env:
+        STEP_BUILD_ARGS_ARGUMENTS: ${{ steps.build-args.outputs.arguments }}
+        INPUT_REPO: ${{ inputs.repo }}
+        INPUT_TAG: ${{ inputs.tag }}
 
     - name: "✅ Verify release creation"
       id: verify
@@ -421,16 +471,16 @@ runs:
       run: |
         echo "::debug::Verifying release creation..."
 
-        RELEASE_TAG="${{ steps.execute.outputs.release-tag }}"
+        RELEASE_TAG="${STEP_EXECUTE_RELEASE_TAG}"
         if [ -z "$RELEASE_TAG" ]; then
-          RELEASE_TAG="${{ inputs.tag }}"
+          RELEASE_TAG="${INPUT_TAG}"
         fi
 
         if [ -n "$RELEASE_TAG" ]; then
           # Verify release exists
           REPO_PARAM=""
-          if [ -n "${{ inputs.repo }}" ]; then
-            REPO_PARAM="--repo ${{ inputs.repo }}"
+          if [ -n "${INPUT_REPO}" ]; then
+            REPO_PARAM="--repo ${INPUT_REPO}"
           fi
 
           if gh release view "$RELEASE_TAG" $REPO_PARAM >/dev/null 2>&1; then
@@ -457,6 +507,10 @@ runs:
         else
           echo "::warning::No release tag available for verification"
         fi
+      env:
+        STEP_EXECUTE_RELEASE_TAG: ${{ steps.execute.outputs.release-tag }}
+        INPUT_TAG: ${{ inputs.tag }}
+        INPUT_REPO: ${{ inputs.repo }}
 
     # ================== 📊 ==================
 
@@ -464,50 +518,72 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>🚀 GitHub Release : ${{ inputs.tag || 'auto-generated' }}</summary>
+        cat >> $GITHUB_STEP_SUMMARY << EOF
+        <details><summary>🚀 GitHub Release : ${INPUT_TAG}</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 🏷️ Tag | `${{ inputs.tag || 'auto-generated' }}` |
-        | 📦 Assets | `${{ inputs.assets || 'none' }}` |
-        | 📝 Title | `${{ inputs.title || 'auto-generated' }}` |
-        | 📋 Draft | `${{ inputs.draft }}` |
-        | 🚧 Prerelease | `${{ inputs.prerelease }}` |
-        | ⭐ Latest | `${{ inputs.latest }}` |
-        | 🎯 Target | `${{ inputs.target || 'default branch' }}` |
-        | 📁 Repository | `${{ inputs.repo || 'current' }}` |
+        | 🏷️ Tag | \`${INPUT_TAG}\` |
+        | 📦 Assets | \`${INPUT_ASSETS}\` |
+        | 📝 Title | \`${INPUT_TITLE}\` |
+        | 📋 Draft | \`${INPUT_DRAFT}\` |
+        | 🚧 Prerelease | \`${INPUT_PRERELEASE}\` |
+        | ⭐ Latest | \`${INPUT_LATEST}\` |
+        | 🎯 Target | \`${INPUT_TARGET}\` |
+        | 📁 Repository | \`${INPUT_REPO}\` |
 
         ## 📤 Release Results
         | Metric | Value |
         |--------|---------|
-        | 🆔 Release ID | `${{ steps.execute.outputs.release-id }}` |
-        | 🔗 Release URL | `${{ steps.execute.outputs.release-url }}` |
-        | 🏷️ Release Tag | `${{ steps.execute.outputs.release-tag }}` |
-        | 📝 Release Name | `${{ steps.execute.outputs.release-name }}` |
-        | 🔗 Upload URL | `${{ steps.execute.outputs.upload-url }}` |
+        | 🆔 Release ID | \`${STEP_EXECUTE_RELEASE_ID}\` |
+        | 🔗 Release URL | \`${STEP_EXECUTE_RELEASE_URL}\` |
+        | 🏷️ Release Tag | \`${STEP_EXECUTE_RELEASE_TAG}\` |
+        | 📝 Release Name | \`${STEP_EXECUTE_RELEASE_NAME}\` |
+        | 🔗 Upload URL | \`${STEP_EXECUTE_UPLOAD_URL}\` |
 
         ## ⚙️ Release Configuration
         | Option | Status |
         |--------|---------|
-        | 📄 Generate Notes | `${{ inputs.generate-notes }}` |
-        | 📄 Notes from Tag | `${{ inputs.notes-from-tag }}` |
-        | ✅ Verify Tag | `${{ inputs.verify-tag }}` |
-        | 🔍 Fail on No Commits | `${{ inputs.fail-on-no-commits }}` |
-        | 💬 Discussion Category | `${{ inputs.discussion-category || 'none' }}` |
+        | 📄 Generate Notes | \`${INPUT_GENERATE_NOTES}\` |
+        | 📄 Notes from Tag | \`${INPUT_NOTES_FROM_TAG}\` |
+        | ✅ Verify Tag | \`${INPUT_VERIFY_TAG}\` |
+        | 🔍 Fail on No Commits | \`${INPUT_FAIL_ON_NO_COMMITS}\` |
+        | 💬 Discussion Category | \`${INPUT_DISCUSSION_CATEGORY}\` |
 
         ## ⚙️ Process Details
         | Step | Status |
         |------|---------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | ⚙️ GitHub CLI Setup | `✅ Completed` |
-        | 🚀 Release Creation | `${{ steps.execute.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🔍 Release Verification | `${{ steps.verify.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 🏗️ Argument Building | \`${STEP_BUILD_ARGS_OUTCOME_LABEL}\` |
+        | ⚙️ GitHub CLI Setup | \`✅ Completed\` |
+        | 🚀 Release Creation | \`${STEP_EXECUTE_OUTCOME_LABEL}\` |
+        | 🔍 Release Verification | \`${STEP_VERIFY_OUTCOME_LABEL}\` |
 
         </details>
         EOF
+      env:
+        INPUT_TAG: ${{ inputs.tag || 'auto-generated' }}
+        INPUT_ASSETS: ${{ inputs.assets || 'none' }}
+        INPUT_TITLE: ${{ inputs.title || 'auto-generated' }}
+        INPUT_DRAFT: ${{ inputs.draft }}
+        INPUT_PRERELEASE: ${{ inputs.prerelease }}
+        INPUT_LATEST: ${{ inputs.latest }}
+        INPUT_TARGET: ${{ inputs.target || 'default branch' }}
+        INPUT_REPO: ${{ inputs.repo || 'current' }}
+        STEP_EXECUTE_RELEASE_ID: ${{ steps.execute.outputs.release-id }}
+        STEP_EXECUTE_RELEASE_URL: ${{ steps.execute.outputs.release-url }}
+        STEP_EXECUTE_RELEASE_TAG: ${{ steps.execute.outputs.release-tag }}
+        STEP_EXECUTE_RELEASE_NAME: ${{ steps.execute.outputs.release-name }}
+        STEP_EXECUTE_UPLOAD_URL: ${{ steps.execute.outputs.upload-url }}
+        INPUT_GENERATE_NOTES: ${{ inputs.generate-notes }}
+        INPUT_NOTES_FROM_TAG: ${{ inputs.notes-from-tag }}
+        INPUT_VERIFY_TAG: ${{ inputs.verify-tag }}
+        INPUT_FAIL_ON_NO_COMMITS: ${{ inputs.fail-on-no-commits }}
+        INPUT_DISCUSSION_CATEGORY: ${{ inputs.discussion-category || 'none' }}
+        STEP_BUILD_ARGS_OUTCOME_LABEL: ${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_EXECUTE_OUTCOME_LABEL: ${{ steps.execute.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_VERIFY_OUTCOME_LABEL: ${{ steps.verify.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
 
 branding:
   icon: "tag"

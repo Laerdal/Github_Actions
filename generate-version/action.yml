@@ -168,19 +168,19 @@ runs:
       run: |
         echo "::debug::Validating version number inputs..."
 
-        if [ "${{ inputs.config-file }}" != "" ]; then
-          echo "::debug::📋 Config file provided (${{ steps.normalize-config-file.outputs.normalized }})"
+        if [ "${INPUT_CONFIG_FILE}" != "" ]; then
+          echo "::debug::📋 Config file provided (${STEP_NORMALIZE_CONFIG_FILE_NORMALIZED})"
 
-          if [ ! -f "${{ steps.normalize-config-file.outputs.normalized }}" ]; then
-            echo "::error::Version configuration file ${{ steps.normalize-config-file.outputs.normalized }} not found"
+          if [ ! -f "${STEP_NORMALIZE_CONFIG_FILE_NORMALIZED}" ]; then
+            echo "::error::Version configuration file ${STEP_NORMALIZE_CONFIG_FILE_NORMALIZED} not found"
             exit 1
           fi
 
-          VERSION_MAJOR=$(jq -r '.major' "${{ steps.normalize-config-file.outputs.normalized }}")
-          VERSION_MINOR=$(jq -r '.minor' "${{ steps.normalize-config-file.outputs.normalized }}")
-        elif [ "${{ inputs.major }}" != "" ] && [ "${{ inputs.minor }}" != "" ]; then
-          VERSION_MAJOR="${{ inputs.major }}"
-          VERSION_MINOR="${{ inputs.minor }}"
+          VERSION_MAJOR=$(jq -r '.major' "${STEP_NORMALIZE_CONFIG_FILE_NORMALIZED}")
+          VERSION_MINOR=$(jq -r '.minor' "${STEP_NORMALIZE_CONFIG_FILE_NORMALIZED}")
+        elif [ "${INPUT_MAJOR}" != "" ] && [ "${INPUT_MINOR}" != "" ]; then
+          VERSION_MAJOR="${INPUT_MAJOR}"
+          VERSION_MINOR="${INPUT_MINOR}"
         else
           echo "::error::You must provide either a config-file or both major and minor version numbers."
           exit 1
@@ -202,16 +202,21 @@ runs:
         echo "minor=$VERSION_MINOR" >> $GITHUB_OUTPUT
 
         echo "✅ Version number validation completed successfully"
+      env:
+        INPUT_CONFIG_FILE: ${{ inputs.config-file }}
+        STEP_NORMALIZE_CONFIG_FILE_NORMALIZED: ${{ steps.normalize-config-file.outputs.normalized }}
+        INPUT_MAJOR: ${{ inputs.major }}
+        INPUT_MINOR: ${{ inputs.minor }}
 
     - name: "✅ Validate input : build ID"
       shell: bash
       run: |
         echo "::debug::Validating build ID input..."
 
-        BUILD_ID="${{ inputs.build-id }}"
+        BUILD_ID="${INPUT_BUILD_ID}"
 
         if [ -z "$BUILD_ID" ]; then
-          BUILD_ID="${{ github.run_number }}"
+          BUILD_ID="${GH_RUN_NUMBER}"
           echo "::debug::No build ID provided, using GitHub run number: $BUILD_ID"
         fi
 
@@ -221,6 +226,9 @@ runs:
         fi
 
         echo "✅ Build ID validation completed successfully"
+      env:
+        INPUT_BUILD_ID: ${{ inputs.build-id }}
+        GH_RUN_NUMBER: ${{ github.run_number }}
 
     - name: "✅ Validate input : numeric parameters"
       shell: bash
@@ -228,18 +236,21 @@ runs:
         echo "::debug::Validating numeric parameter inputs..."
 
         # Validate fetch-depth
-        if ! [[ "${{ inputs.fetch-depth }}" =~ ^[0-9]+$ ]]; then
-          echo "::error::Fetch depth must be a non-negative integer, got: ${{ inputs.fetch-depth }}"
+        if ! [[ "${INPUT_FETCH_DEPTH}" =~ ^[0-9]+$ ]]; then
+          echo "::error::Fetch depth must be a non-negative integer, got: ${INPUT_FETCH_DEPTH}"
           exit 1
         fi
 
         # Validate branch-suffix-max-length
-        if ! [[ "${{ inputs.branch-suffix-max-length }}" =~ ^[0-9]+$ ]] || [ "${{ inputs.branch-suffix-max-length }}" -eq 0 ]; then
-          echo "::error::Branch suffix max length must be a positive integer, got: ${{ inputs.branch-suffix-max-length }}"
+        if ! [[ "${INPUT_BRANCH_SUFFIX_MAX_LENGTH}" =~ ^[0-9]+$ ]] || [ "${INPUT_BRANCH_SUFFIX_MAX_LENGTH}" -eq 0 ]; then
+          echo "::error::Branch suffix max length must be a positive integer, got: ${INPUT_BRANCH_SUFFIX_MAX_LENGTH}"
           exit 1
         fi
 
         echo "✅ Numeric parameter validation completed successfully"
+      env:
+        INPUT_FETCH_DEPTH: ${{ inputs.fetch-depth }}
+        INPUT_BRANCH_SUFFIX_MAX_LENGTH: ${{ inputs.branch-suffix-max-length }}
 
     - name: "✅ Validate input : booleans"
       shell: bash
@@ -247,8 +258,8 @@ runs:
         echo "::debug::Validating boolean inputs..."
         for param in show-summary dry-run; do
           case $param in
-            show-summary) value="${{ inputs.show-summary }}" ;;
-            dry-run) value="${{ inputs.dry-run }}" ;;
+            show-summary) value="${INPUT_SHOW_SUMMARY}" ;;
+            dry-run) value="${INPUT_DRY_RUN}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -257,90 +268,103 @@ runs:
         done
 
         echo "✅ Boolean inputs validation completed successfully"
+      env:
+        INPUT_SHOW_SUMMARY: ${{ inputs.show-summary }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
 
     - name: "✅ Validate input : tag-prefix"
       shell: bash
       run: |
-        echo "::debug::Validating tag-prefix input: ${{ inputs.tag-prefix }}"
+        echo "::debug::Validating tag-prefix input: ${INPUT_TAG_PREFIX}"
 
         # Tag prefix should be safe for Git tags (no spaces, special chars)
-        if [[ "${{ inputs.tag-prefix }}" =~ [[:space:]] ]] || [[ "${{ inputs.tag-prefix }}" =~ [\"\'] ]] || [[ "${{ inputs.tag-prefix }}" =~ [\\] ]]; then
-          echo "::error::Tag prefix cannot contain spaces, quotes, or backslashes: ${{ inputs.tag-prefix }}"
+        if [[ "${INPUT_TAG_PREFIX}" =~ [[:space:]] ]] || [[ "${INPUT_TAG_PREFIX}" =~ [\"\'] ]] || [[ "${INPUT_TAG_PREFIX}" =~ [\\] ]]; then
+          echo "::error::Tag prefix cannot contain spaces, quotes, or backslashes: ${INPUT_TAG_PREFIX}"
           exit 1
         fi
 
         echo "✅ Tag prefix validation completed successfully"
+      env:
+        INPUT_TAG_PREFIX: ${{ inputs.tag-prefix }}
 
     - name: "✅ Validate input : main-branch"
       if: ${{ inputs.main-branch != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating main-branch input: ${{ inputs.main-branch }}"
+        echo "::debug::Validating main-branch input: ${INPUT_MAIN_BRANCH}"
 
         # Main branch name should be a valid Git branch name
-        if [[ "${{ inputs.main-branch }}" =~ [[:space:]] ]] || [[ "${{ inputs.main-branch }}" =~ \.\. ]] || [[ "${{ inputs.main-branch }}" =~ ^[\-\.] ]] || [[ "${{ inputs.main-branch }}" =~ [\-\.]$ ]]; then
-          echo "::error::Invalid main branch name format: ${{ inputs.main-branch }}"
+        if [[ "${INPUT_MAIN_BRANCH}" =~ [[:space:]] ]] || [[ "${INPUT_MAIN_BRANCH}" =~ \.\. ]] || [[ "${INPUT_MAIN_BRANCH}" =~ ^[\-\.] ]] || [[ "${INPUT_MAIN_BRANCH}" =~ [\-\.]$ ]]; then
+          echo "::error::Invalid main branch name format: ${INPUT_MAIN_BRANCH}"
           exit 1
         fi
 
         echo "✅ Main branch validation completed successfully"
+      env:
+        INPUT_MAIN_BRANCH: ${{ inputs.main-branch }}
 
     - name: "✅ Validate input : output-txt"
       if: ${{ inputs.output-txt != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating output-txt input: ${{ steps.normalize-output-txt.outputs.normalized }}"
+        echo "::debug::Validating output-txt input: ${STEP_NORMALIZE_OUTPUT_TXT_NORMALIZED}"
 
         # Validate file extension
-        if [[ ! "${{ steps.normalize-output-txt.outputs.normalized }}" =~ \.(txt|env)$ ]]; then
+        if [[ ! "${STEP_NORMALIZE_OUTPUT_TXT_NORMALIZED}" =~ \.(txt|env)$ ]]; then
           echo "::warning::Output txt file should typically have .txt or .env extension"
         fi
 
         # Validate output directory exists or can be created
-        OUTPUT_DIR=$(dirname "${{ steps.normalize-output-txt.outputs.normalized }}")
+        OUTPUT_DIR=$(dirname "${STEP_NORMALIZE_OUTPUT_TXT_NORMALIZED}")
         if [ "$OUTPUT_DIR" != "." ] && [ ! -d "$OUTPUT_DIR" ]; then
           echo "::debug::Output directory will be created: $OUTPUT_DIR"
         fi
 
         echo "✅ Output txt validation completed successfully"
+      env:
+        STEP_NORMALIZE_OUTPUT_TXT_NORMALIZED: ${{ steps.normalize-output-txt.outputs.normalized }}
 
     - name: "✅ Validate input : output-props"
       if: ${{ inputs.output-props != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating output-props input: ${{ steps.normalize-output-props.outputs.normalized }}"
+        echo "::debug::Validating output-props input: ${STEP_NORMALIZE_OUTPUT_PROPS_NORMALIZED}"
 
         # Validate file extension
-        if [[ ! "${{ steps.normalize-output-props.outputs.normalized }}" =~ \.(props|xml)$ ]]; then
+        if [[ ! "${STEP_NORMALIZE_OUTPUT_PROPS_NORMALIZED}" =~ \.(props|xml)$ ]]; then
           echo "::warning::Output props file should typically have .props or .xml extension"
         fi
 
         # Validate output directory exists or can be created
-        OUTPUT_DIR=$(dirname "${{ steps.normalize-output-props.outputs.normalized }}")
+        OUTPUT_DIR=$(dirname "${STEP_NORMALIZE_OUTPUT_PROPS_NORMALIZED}")
         if [ "$OUTPUT_DIR" != "." ] && [ ! -d "$OUTPUT_DIR" ]; then
           echo "::debug::Output directory will be created: $OUTPUT_DIR"
         fi
 
         echo "✅ Output props validation completed successfully"
+      env:
+        STEP_NORMALIZE_OUTPUT_PROPS_NORMALIZED: ${{ steps.normalize-output-props.outputs.normalized }}
 
     - name: "✅ Validate input : output-json"
       if: ${{ inputs.output-json != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating output-json input: ${{ steps.normalize-output-json.outputs.normalized }}"
+        echo "::debug::Validating output-json input: ${STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED}"
 
         # Validate file extension
-        if [[ ! "${{ steps.normalize-output-json.outputs.normalized }}" =~ \.json$ ]]; then
+        if [[ ! "${STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED}" =~ \.json$ ]]; then
           echo "::warning::Output JSON file should have .json extension"
         fi
 
         # Validate output directory exists or can be created
-        OUTPUT_DIR=$(dirname "${{ steps.normalize-output-json.outputs.normalized }}")
+        OUTPUT_DIR=$(dirname "${STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED}")
         if [ "$OUTPUT_DIR" != "." ] && [ ! -d "$OUTPUT_DIR" ]; then
           echo "::debug::Output directory will be created: $OUTPUT_DIR"
         fi
 
         echo "✅ Output JSON validation completed successfully"
+      env:
+        STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED: ${{ steps.normalize-output-json.outputs.normalized }}
 
     # ================== 🔍 ==================
 
@@ -356,7 +380,7 @@ runs:
         fi
 
         # Fetch full history if fetch-depth is 0, otherwise fetch specified depth
-        if [ "${{ inputs.fetch-depth }}" = "0" ]; then
+        if [ "${INPUT_FETCH_DEPTH}" = "0" ]; then
           echo "::debug::Fetching full Git history"
           if git rev-parse --is-shallow-repository | grep -q true; then
             git fetch --unshallow --tags || {
@@ -367,8 +391,8 @@ runs:
             git fetch --tags
           fi
         else
-          echo "::debug::Fetching Git history with depth ${{ inputs.fetch-depth }}"
-          git fetch --depth=${{ inputs.fetch-depth }} --tags
+          echo "::debug::Fetching Git history with depth ${INPUT_FETCH_DEPTH}"
+          git fetch --depth=${INPUT_FETCH_DEPTH} --tags
         fi
 
         # Verify we have access to tags
@@ -382,6 +406,8 @@ runs:
         else
           echo "::warning::Unable to determine current branch (detached HEAD?)"
         fi
+      env:
+        INPUT_FETCH_DEPTH: ${{ inputs.fetch-depth }}
 
     # ================== 🚀 ==================
 
@@ -400,12 +426,12 @@ runs:
         }
 
         # Input values
-        major_version="${{ steps.major-minor-validation.outputs.major }}"
-        minor_version="${{ steps.major-minor-validation.outputs.minor }}"
-        main_branch="${{ inputs.main-branch }}"
-        build_id="${{ inputs.build-id }}"
-        tag_prefix="${{ inputs.tag-prefix }}"
-        branch_suffix_max_length="${{ inputs.branch-suffix-max-length }}"
+        major_version="${STEP_MAJOR_MINOR_VALIDATION_MAJOR}"
+        minor_version="${STEP_MAJOR_MINOR_VALIDATION_MINOR}"
+        main_branch="${INPUT_MAIN_BRANCH}"
+        build_id="${INPUT_BUILD_ID}"
+        tag_prefix="${INPUT_TAG_PREFIX}"
+        branch_suffix_max_length="${INPUT_BRANCH_SUFFIX_MAX_LENGTH}"
 
         echo "📊 Input parameters:"
         echo "  🔢 Major: $major_version"
@@ -415,12 +441,12 @@ runs:
         echo "  🏷️ Tag prefix: $tag_prefix"
 
         # Get current branch name
-        if [ "${{ github.head_ref }}" != "" ]; then
+        if [ "${GH_HEAD_REF}" != "" ]; then
           # For pull requests
-          branch_name="${{ github.head_ref }}"
+          branch_name="${GH_HEAD_REF}"
         else
           # For push events
-          branch_name="${{ github.ref_name }}"
+          branch_name="${GH_REF_NAME}"
         fi
 
         echo "🌿 Current branch: $branch_name"
@@ -555,14 +581,14 @@ runs:
         setEnvironmentVariable "VERSION_SCRIPTCALLED" "true"
 
         # Check if running in dry-run mode
-        if [ "${{ inputs.dry-run }}" = "true" ]; then
+        if [ "${INPUT_DRY_RUN}" = "true" ]; then
           echo "🧪 Running in dry-run mode - skipping file generation"
           setEnvironmentVariable "VERSION_OUTPUTTXT" ""
           setEnvironmentVariable "VERSION_OUTPUTPROPS" ""
           setEnvironmentVariable "VERSION_OUTPUTJSON" ""
         else
           # Generate txt file if requested
-          output_txt="${{ steps.normalize-output-txt.outputs.normalized }}"
+          output_txt="${STEP_NORMALIZE_OUTPUT_TXT_NORMALIZED}"
           if [ -n "$output_txt" ]; then
             echo "📝 Generating txt file: $output_txt"
             mkdir -p "$(dirname "$output_txt")" && touch "$output_txt"
@@ -588,7 +614,7 @@ runs:
           fi
 
           # Generate props file if requested
-          output_props="${{ steps.normalize-output-props.outputs.normalized }}"
+          output_props="${STEP_NORMALIZE_OUTPUT_PROPS_NORMALIZED}"
           if [ -n "$output_props" ]; then
             echo "📝 Generating props file: $output_props"
             mkdir -p "$(dirname "$output_props")" && touch "$output_props"
@@ -618,7 +644,7 @@ runs:
           fi
 
           # Generate JSON file if requested
-          output_json="${{ steps.normalize-output-json.outputs.normalized }}"
+          output_json="${STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED}"
           if [ -n "$output_json" ]; then
             echo "📝 Generating JSON file: $output_json"
             mkdir -p "$(dirname "$output_json")" && touch "$output_json"
@@ -647,6 +673,19 @@ runs:
         fi  # End of dry-run check
 
         echo "✅ Version generation completed successfully"
+      env:
+        STEP_MAJOR_MINOR_VALIDATION_MAJOR: ${{ steps.major-minor-validation.outputs.major }}
+        STEP_MAJOR_MINOR_VALIDATION_MINOR: ${{ steps.major-minor-validation.outputs.minor }}
+        INPUT_MAIN_BRANCH: ${{ inputs.main-branch }}
+        INPUT_BUILD_ID: ${{ inputs.build-id }}
+        INPUT_TAG_PREFIX: ${{ inputs.tag-prefix }}
+        INPUT_BRANCH_SUFFIX_MAX_LENGTH: ${{ inputs.branch-suffix-max-length }}
+        GH_HEAD_REF: ${{ github.head_ref }}
+        GH_REF_NAME: ${{ github.ref_name }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+        STEP_NORMALIZE_OUTPUT_TXT_NORMALIZED: ${{ steps.normalize-output-txt.outputs.normalized }}
+        STEP_NORMALIZE_OUTPUT_PROPS_NORMALIZED: ${{ steps.normalize-output-props.outputs.normalized }}
+        STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED: ${{ steps.normalize-output-json.outputs.normalized }}
 
     # ================== 🔍 ==================
 
@@ -686,43 +725,43 @@ runs:
         fi
 
         # Verify output files if they were requested
-        if [ -n "${{ inputs.output-txt }}" ]; then
-          if [ -f "${{ steps.normalize-output-txt.outputs.normalized }}" ]; then
-            echo "✅ Output txt file created: ${{ steps.normalize-output-txt.outputs.normalized }}"
+        if [ -n "${INPUT_OUTPUT_TXT}" ]; then
+          if [ -f "${STEP_NORMALIZE_OUTPUT_TXT_NORMALIZED}" ]; then
+            echo "✅ Output txt file created: ${STEP_NORMALIZE_OUTPUT_TXT_NORMALIZED}"
             echo "::debug::Content preview:"
-            head -5 "${{ steps.normalize-output-txt.outputs.normalized }}" | sed 's/^/  /'
+            head -5 "${STEP_NORMALIZE_OUTPUT_TXT_NORMALIZED}" | sed 's/^/  /'
           else
-            echo "::error file=${{ steps.normalize-output-txt.outputs.normalized }}::Output txt file not created: ${{ steps.normalize-output-txt.outputs.normalized }}"
+            echo "::error file=${STEP_NORMALIZE_OUTPUT_TXT_NORMALIZED}::Output txt file not created: ${STEP_NORMALIZE_OUTPUT_TXT_NORMALIZED}"
             exit 1
           fi
         fi
 
-        if [ -n "${{ inputs.output-props }}" ]; then
-          if [ -f "${{ steps.normalize-output-props.outputs.normalized }}" ]; then
-            echo "✅ Output props file created: ${{ steps.normalize-output-props.outputs.normalized }}"
+        if [ -n "${INPUT_OUTPUT_PROPS}" ]; then
+          if [ -f "${STEP_NORMALIZE_OUTPUT_PROPS_NORMALIZED}" ]; then
+            echo "✅ Output props file created: ${STEP_NORMALIZE_OUTPUT_PROPS_NORMALIZED}"
             echo "::debug::Content preview:"
-            head -10 "${{ steps.normalize-output-props.outputs.normalized }}" | sed 's/^/  /'
+            head -10 "${STEP_NORMALIZE_OUTPUT_PROPS_NORMALIZED}" | sed 's/^/  /'
           else
-            echo "::error file=${{ steps.normalize-output-props.outputs.normalized }}::Output props file not created: ${{ steps.normalize-output-props.outputs.normalized }}"
+            echo "::error file=${STEP_NORMALIZE_OUTPUT_PROPS_NORMALIZED}::Output props file not created: ${STEP_NORMALIZE_OUTPUT_PROPS_NORMALIZED}"
             exit 1
           fi
         fi
 
-        if [ -n "${{ inputs.output-json }}" ]; then
-          if [ -f "${{ steps.normalize-output-json.outputs.normalized }}" ]; then
-            echo "✅ Output JSON file created: ${{ steps.normalize-output-json.outputs.normalized }}"
+        if [ -n "${INPUT_OUTPUT_JSON}" ]; then
+          if [ -f "${STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED}" ]; then
+            echo "✅ Output JSON file created: ${STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED}"
             echo "::debug::Content preview:"
-            head -10 "${{ steps.normalize-output-json.outputs.normalized }}" | sed 's/^/  /'
+            head -10 "${STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED}" | sed 's/^/  /'
             # Validate JSON format
             if command -v jq >/dev/null 2>&1; then
-              if jq empty "${{ steps.normalize-output-json.outputs.normalized }}" 2>/dev/null; then
+              if jq empty "${STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED}" 2>/dev/null; then
                 echo "✅ JSON file is valid"
               else
                 echo "::error::Generated JSON file is invalid"
                 exit 1
               fi
             elif command -v python3 >/dev/null 2>&1; then
-              if python3 -m json.tool "${{ steps.normalize-output-json.outputs.normalized }}" >/dev/null 2>&1; then
+              if python3 -m json.tool "${STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED}" >/dev/null 2>&1; then
                 echo "✅ JSON file is valid"
               else
                 echo "::error::Generated JSON file is invalid"
@@ -732,12 +771,19 @@ runs:
               echo "::warning::Neither jq nor python3 available for JSON validation"
             fi
           else
-            echo "::error file=${{ steps.normalize-output-json.outputs.normalized }}::Output JSON file not created: ${{ steps.normalize-output-json.outputs.normalized }}"
+            echo "::error file=${STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED}::Output JSON file not created: ${STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED}"
             exit 1
           fi
         fi
 
         echo "✅ Version verification completed successfully"
+      env:
+        INPUT_OUTPUT_TXT: ${{ inputs.output-txt }}
+        STEP_NORMALIZE_OUTPUT_TXT_NORMALIZED: ${{ steps.normalize-output-txt.outputs.normalized }}
+        INPUT_OUTPUT_PROPS: ${{ inputs.output-props }}
+        STEP_NORMALIZE_OUTPUT_PROPS_NORMALIZED: ${{ steps.normalize-output-props.outputs.normalized }}
+        INPUT_OUTPUT_JSON: ${{ inputs.output-json }}
+        STEP_NORMALIZE_OUTPUT_JSON_NORMALIZED: ${{ steps.normalize-output-json.outputs.normalized }}
 
     # ================== 📊 ==================
 
@@ -745,61 +791,93 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>🔢 Generate Version : ${{ steps.generate.outputs.VERSION_FULL }}</summary>
+        cat >> $GITHUB_STEP_SUMMARY << EOF
+        <details><summary>🔢 Generate Version : ${STEP_GENERATE_VERSION_FULL}</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 🔢 Major Version | `${{ steps.major-minor-validation.outputs.major }}` |
-        | 🔢 Minor Version | `${{ steps.major-minor-validation.outputs.minor }}` |
-        | 🌿 Main Branch | `${{ inputs.main-branch }}` |
-        | 🆔 Build ID | `${{ inputs.build-id }}` |
-        | 🏷️ Tag Prefix | `${{ inputs.tag-prefix }}` |
-        | 📏 Branch Suffix Max Length | `${{ inputs.branch-suffix-max-length }}` |
-        | 🧪 Dry Run | `${{ inputs.dry-run }}` |
-        | 🔍 Fetch Depth | `${{ inputs.fetch-depth }}` |
+        | 🔢 Major Version | \`${STEP_MAJOR_MINOR_VALIDATION_MAJOR}\` |
+        | 🔢 Minor Version | \`${STEP_MAJOR_MINOR_VALIDATION_MINOR}\` |
+        | 🌿 Main Branch | \`${INPUT_MAIN_BRANCH}\` |
+        | 🆔 Build ID | \`${INPUT_BUILD_ID}\` |
+        | 🏷️ Tag Prefix | \`${INPUT_TAG_PREFIX}\` |
+        | 📏 Branch Suffix Max Length | \`${INPUT_BRANCH_SUFFIX_MAX_LENGTH}\` |
+        | 🧪 Dry Run | \`${INPUT_DRY_RUN}\` |
+        | 🔍 Fetch Depth | \`${INPUT_FETCH_DEPTH}\` |
 
         ## 📤 Generated Versions
         | Version Type | Value |
         |--------------|-------|
-        | 🎯 Core Version | `${{ steps.generate.outputs.VERSION_CORE }}` |
-        | 🔗 Full Version | `${{ steps.generate.outputs.VERSION_FULL }}` |
-        | 📚 Assembly Version | `${{ steps.generate.outputs.VERSION_ASSEMBLY }}` |
-        | 🏷️ For Tag | `${{ steps.generate.outputs.VERSION_FORTAG }}` |
-        | 🌿 Branch Name | `${{ steps.generate.outputs.VERSION_BRANCHNAME }}` |
-        | 🏷️ Tag Prefix | `${{ steps.generate.outputs.VERSION_PREFIX }}` |
-        | 📎 Suffix | `${{ steps.generate.outputs.VERSION_SUFFIX || 'none' }}` |
-        | 🔄 Revision | `${{ steps.generate.outputs.VERSION_REVISION || 'none' }}` |
-        | 🏷️ Tag Exists | `${{ steps.generate.outputs.VERSION_TAG_EXISTS }}` |
-        | 📋 Latest Tag | `${{ steps.generate.outputs.VERSION_LATEST_TAG || 'none' }}` |
+        | 🎯 Core Version | \`${STEP_GENERATE_VERSION_CORE}\` |
+        | 🔗 Full Version | \`${STEP_GENERATE_VERSION_FULL}\` |
+        | 📚 Assembly Version | \`${STEP_GENERATE_VERSION_ASSEMBLY}\` |
+        | 🏷️ For Tag | \`${STEP_GENERATE_VERSION_FORTAG}\` |
+        | 🌿 Branch Name | \`${STEP_GENERATE_VERSION_BRANCHNAME}\` |
+        | 🏷️ Tag Prefix | \`${STEP_GENERATE_VERSION_PREFIX}\` |
+        | 📎 Suffix | \`${STEP_GENERATE_VERSION_SUFFIX}\` |
+        | 🔄 Revision | \`${STEP_GENERATE_VERSION_REVISION}\` |
+        | 🏷️ Tag Exists | \`${STEP_GENERATE_VERSION_TAG_EXISTS}\` |
+        | 📋 Latest Tag | \`${STEP_GENERATE_VERSION_LATEST_TAG}\` |
 
         ## 📁 Output Files
         | File Type | Path | Status |
         |-----------|------|--------|
-        | 📝 Txt File | `${{ inputs.output-txt || 'not requested' }}` | `${{ inputs.output-txt != '' && '✅ Generated' || '⏭️ Skipped' }}` |
-        | 📄 Props File | `${{ inputs.output-props || 'not requested' }}` | `${{ inputs.output-props != '' && '✅ Generated' || '⏭️ Skipped' }}` |
-        | 📋 JSON File | `${{ inputs.output-json || 'not requested' }}` | `${{ inputs.output-json != '' && '✅ Generated' || '⏭️ Skipped' }}` |
+        | 📝 Txt File | \`${INPUT_OUTPUT_TXT}\` | \`${INPUT_OUTPUT_TXT_LABEL}\` |
+        | 📄 Props File | \`${INPUT_OUTPUT_PROPS}\` | \`${INPUT_OUTPUT_PROPS_LABEL}\` |
+        | 📋 JSON File | \`${INPUT_OUTPUT_JSON}\` | \`${INPUT_OUTPUT_JSON_LABEL}\` |
 
         ## 🔧 Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 🔍 Git History Fetch | `✅ Completed` |
-        | 🔢 Version Generation | `${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🔍 Version Verification | `${{ steps.verify.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 🔍 Git History Fetch | \`✅ Completed\` |
+        | 🔢 Version Generation | \`${STEP_GENERATE_OUTCOME_LABEL}\` |
+        | 🔍 Version Verification | \`${STEP_VERIFY_OUTCOME_LABEL}\` |
 
         ## 📋 Version Components Breakdown
         | Component | Value | Description |
         |-----------|-------|-------------|
-        | Major | `${{ steps.generate.outputs.VERSION_MAJOR }}` | Major version number (input) |
-        | Minor | `${{ steps.generate.outputs.VERSION_MINOR }}` | Minor version number (input) |
-        | Patch | `${{ steps.generate.outputs.VERSION_PATCH }}` | Auto-incremented from Git tags |
-        | Build ID | `${{ steps.generate.outputs.VERSION_BUILDID }}` | Build identifier for this run |
-        | Extension | `${{ steps.generate.outputs.VERSION_EXTENSION || 'none' }}` | Branch-specific version extension |
+        | Major | \`${STEP_GENERATE_VERSION_MAJOR}\` | Major version number (input) |
+        | Minor | \`${STEP_GENERATE_VERSION_MINOR}\` | Minor version number (input) |
+        | Patch | \`${STEP_GENERATE_VERSION_PATCH}\` | Auto-incremented from Git tags |
+        | Build ID | \`${STEP_GENERATE_VERSION_BUILDID}\` | Build identifier for this run |
+        | Extension | \`${STEP_GENERATE_VERSION_EXTENSION}\` | Branch-specific version extension |
 
         </details>
         EOF
+      env:
+        STEP_GENERATE_VERSION_FULL: ${{ steps.generate.outputs.VERSION_FULL }}
+        STEP_MAJOR_MINOR_VALIDATION_MAJOR: ${{ steps.major-minor-validation.outputs.major }}
+        STEP_MAJOR_MINOR_VALIDATION_MINOR: ${{ steps.major-minor-validation.outputs.minor }}
+        INPUT_MAIN_BRANCH: ${{ inputs.main-branch }}
+        INPUT_BUILD_ID: ${{ inputs.build-id }}
+        INPUT_TAG_PREFIX: ${{ inputs.tag-prefix }}
+        INPUT_BRANCH_SUFFIX_MAX_LENGTH: ${{ inputs.branch-suffix-max-length }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+        INPUT_FETCH_DEPTH: ${{ inputs.fetch-depth }}
+        STEP_GENERATE_VERSION_CORE: ${{ steps.generate.outputs.VERSION_CORE }}
+        STEP_GENERATE_VERSION_ASSEMBLY: ${{ steps.generate.outputs.VERSION_ASSEMBLY }}
+        STEP_GENERATE_VERSION_FORTAG: ${{ steps.generate.outputs.VERSION_FORTAG }}
+        STEP_GENERATE_VERSION_BRANCHNAME: ${{ steps.generate.outputs.VERSION_BRANCHNAME }}
+        STEP_GENERATE_VERSION_PREFIX: ${{ steps.generate.outputs.VERSION_PREFIX }}
+        STEP_GENERATE_VERSION_SUFFIX: ${{ steps.generate.outputs.VERSION_SUFFIX || 'none' }}
+        STEP_GENERATE_VERSION_REVISION: ${{ steps.generate.outputs.VERSION_REVISION || 'none' }}
+        STEP_GENERATE_VERSION_TAG_EXISTS: ${{ steps.generate.outputs.VERSION_TAG_EXISTS }}
+        STEP_GENERATE_VERSION_LATEST_TAG: ${{ steps.generate.outputs.VERSION_LATEST_TAG || 'none' }}
+        INPUT_OUTPUT_TXT: ${{ inputs.output-txt || 'not requested' }}
+        INPUT_OUTPUT_TXT_LABEL: ${{ inputs.output-txt != '' && '✅ Generated' || '⏭️ Skipped' }}
+        INPUT_OUTPUT_PROPS: ${{ inputs.output-props || 'not requested' }}
+        INPUT_OUTPUT_PROPS_LABEL: ${{ inputs.output-props != '' && '✅ Generated' || '⏭️ Skipped' }}
+        INPUT_OUTPUT_JSON: ${{ inputs.output-json || 'not requested' }}
+        INPUT_OUTPUT_JSON_LABEL: ${{ inputs.output-json != '' && '✅ Generated' || '⏭️ Skipped' }}
+        STEP_GENERATE_OUTCOME_LABEL: ${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_VERIFY_OUTCOME_LABEL: ${{ steps.verify.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_GENERATE_VERSION_MAJOR: ${{ steps.generate.outputs.VERSION_MAJOR }}
+        STEP_GENERATE_VERSION_MINOR: ${{ steps.generate.outputs.VERSION_MINOR }}
+        STEP_GENERATE_VERSION_PATCH: ${{ steps.generate.outputs.VERSION_PATCH }}
+        STEP_GENERATE_VERSION_BUILDID: ${{ steps.generate.outputs.VERSION_BUILDID }}
+        STEP_GENERATE_VERSION_EXTENSION: ${{ steps.generate.outputs.VERSION_EXTENSION || 'none' }}
 
 branding:
   icon: "hash"

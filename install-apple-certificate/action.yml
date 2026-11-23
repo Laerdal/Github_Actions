@@ -93,20 +93,25 @@ runs:
       shell: bash
       run: |
         # Mask all sensitive data FIRST
-        if [ -n "${{ inputs.certificate-password }}" ]; then
-          echo "::add-mask::${{ inputs.certificate-password }}"
+        if [ -n "${INPUT_CERTIFICATE_PASSWORD}" ]; then
+          echo "::add-mask::${INPUT_CERTIFICATE_PASSWORD}"
         fi
-        if [ -n "${{ inputs.keychain-password }}" ]; then
-          echo "::add-mask::${{ inputs.keychain-password }}"
+        if [ -n "${INPUT_KEYCHAIN_PASSWORD}" ]; then
+          echo "::add-mask::${INPUT_KEYCHAIN_PASSWORD}"
         fi
-        if [ -n "${{ inputs.certificate-data }}" ]; then
-          echo "::add-mask::${{ inputs.certificate-data }}"
+        if [ -n "${INPUT_CERTIFICATE_DATA}" ]; then
+          echo "::add-mask::${INPUT_CERTIFICATE_DATA}"
         fi
-        if [ -n "${{ inputs.provisioning-profile-data }}" ]; then
-          echo "::add-mask::${{ inputs.provisioning-profile-data }}"
+        if [ -n "${INPUT_PROVISIONING_PROFILE_DATA}" ]; then
+          echo "::add-mask::${INPUT_PROVISIONING_PROFILE_DATA}"
         fi
 
         echo "::debug::Masked sensitive inputs"
+      env:
+        INPUT_CERTIFICATE_PASSWORD: ${{ inputs.certificate-password }}
+        INPUT_KEYCHAIN_PASSWORD: ${{ inputs.keychain-password }}
+        INPUT_CERTIFICATE_DATA: ${{ inputs.certificate-data }}
+        INPUT_PROVISIONING_PROFILE_DATA: ${{ inputs.provisioning-profile-data }}
 
     # ================== 📁 ==================
 
@@ -149,24 +154,28 @@ runs:
         echo "::debug::Validating required parameters..."
 
         # Validate certificate password is provided
-        if [ -z "${{ inputs.certificate-password }}" ]; then
+        if [ -z "${INPUT_CERTIFICATE_PASSWORD}" ]; then
           echo "::error::Certificate password is required"
           exit 1
         fi
 
         # Validate that either certificate-data or certificate-path is provided
-        if [ -z "${{ inputs.certificate-data }}" ] && [ -z "${{ inputs.certificate-path }}" ]; then
+        if [ -z "${INPUT_CERTIFICATE_DATA}" ] && [ -z "${INPUT_CERTIFICATE_PATH}" ]; then
           echo "::error::Either certificate-data or certificate-path must be provided"
           exit 1
         fi
 
         # Validate that both certificate inputs are not provided
-        if [ -n "${{ inputs.certificate-data }}" ] && [ -n "${{ inputs.certificate-path }}" ]; then
+        if [ -n "${INPUT_CERTIFICATE_DATA}" ] && [ -n "${INPUT_CERTIFICATE_PATH}" ]; then
           echo "::error::Only one of certificate-data or certificate-path should be provided"
           exit 1
         fi
 
         echo "✅ Required parameters validation completed successfully"
+      env:
+        INPUT_CERTIFICATE_PASSWORD: ${{ inputs.certificate-password }}
+        INPUT_CERTIFICATE_DATA: ${{ inputs.certificate-data }}
+        INPUT_CERTIFICATE_PATH: ${{ inputs.certificate-path }}
 
     - name: "✅ Validate input : booleans"
       shell: bash
@@ -174,9 +183,9 @@ runs:
         echo "::debug::Validating boolean inputs..."
         for param in delete-keychain allow-codesign-keychain-access show-summary; do
           case $param in
-            delete-keychain) value="${{ inputs.delete-keychain }}" ;;
-            allow-codesign-keychain-access) value="${{ inputs.allow-codesign-keychain-access }}" ;;
-            show-summary) value="${{ inputs.show-summary }}" ;;
+            delete-keychain) value="${INPUT_DELETE_KEYCHAIN}" ;;
+            allow-codesign-keychain-access) value="${INPUT_ALLOW_CODESIGN_KEYCHAIN_ACCESS}" ;;
+            show-summary) value="${INPUT_SHOW_SUMMARY}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -185,37 +194,45 @@ runs:
         done
 
         echo "✅ Boolean inputs validation completed successfully"
+      env:
+        INPUT_DELETE_KEYCHAIN: ${{ inputs.delete-keychain }}
+        INPUT_ALLOW_CODESIGN_KEYCHAIN_ACCESS: ${{ inputs.allow-codesign-keychain-access }}
+        INPUT_SHOW_SUMMARY: ${{ inputs.show-summary }}
 
     - name: "✅ Validate input : certificate-type"
       shell: bash
       run: |
-        echo "::debug::Validating certificate-type input: ${{ inputs.certificate-type }}"
+        echo "::debug::Validating certificate-type input: ${INPUT_CERTIFICATE_TYPE}"
 
-        case "${{ inputs.certificate-type }}" in
+        case "${INPUT_CERTIFICATE_TYPE}" in
           development|distribution|developer-id) ;;
           *) echo "::error::Invalid certificate type. Must be one of: development, distribution, developer-id"; exit 1 ;;
         esac
 
         echo "✅ Certificate type validation completed successfully"
+      env:
+        INPUT_CERTIFICATE_TYPE: ${{ inputs.certificate-type }}
 
     - name: "✅ Validate input : certificate-path"
       if: ${{ inputs.certificate-path != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating certificate-path input: ${{ inputs.certificate-path }}"
+        echo "::debug::Validating certificate-path input: ${INPUT_CERTIFICATE_PATH}"
 
         # Validate certificate file exists
-        if [ ! -f "${{ inputs.certificate-path }}" ]; then
-          echo "::error file=${{ inputs.certificate-path }}::Certificate file not found: ${{ inputs.certificate-path }}"
+        if [ ! -f "${INPUT_CERTIFICATE_PATH}" ]; then
+          echo "::error file=${INPUT_CERTIFICATE_PATH}::Certificate file not found: ${INPUT_CERTIFICATE_PATH}"
           exit 1
         fi
 
         # Validate file extension
-        if [[ ! "${{ inputs.certificate-path }}" =~ \.p12$ ]]; then
-          echo "::warning::Certificate file should have .p12 extension: ${{ inputs.certificate-path }}"
+        if [[ ! "${INPUT_CERTIFICATE_PATH}" =~ \.p12$ ]]; then
+          echo "::warning::Certificate file should have .p12 extension: ${INPUT_CERTIFICATE_PATH}"
         fi
 
         echo "✅ Certificate path validation completed successfully"
+      env:
+        INPUT_CERTIFICATE_PATH: ${{ inputs.certificate-path }}
 
     - name: "✅ Validate input : certificate-data"
       if: ${{ inputs.certificate-data != '' }}
@@ -224,31 +241,35 @@ runs:
         echo "::debug::Validating certificate-data input..."
 
         # Validate base64 format
-        if ! echo "${{ inputs.certificate-data }}" | base64 --decode >/dev/null 2>&1; then
+        if ! echo "${INPUT_CERTIFICATE_DATA}" | base64 --decode >/dev/null 2>&1; then
           echo "::error::Certificate data is not valid base64 format"
           exit 1
         fi
 
         echo "✅ Certificate data validation completed successfully"
+      env:
+        INPUT_CERTIFICATE_DATA: ${{ inputs.certificate-data }}
 
     - name: "✅ Validate input : provisioning-profile-path"
       if: ${{ inputs.provisioning-profile-path != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating provisioning-profile-path input: ${{ inputs.provisioning-profile-path }}"
+        echo "::debug::Validating provisioning-profile-path input: ${INPUT_PROVISIONING_PROFILE_PATH}"
 
         # Validate provisioning profile file exists
-        if [ ! -f "${{ inputs.provisioning-profile-path }}" ]; then
-          echo "::error file=${{ inputs.provisioning-profile-path }}::Provisioning profile file not found: ${{ inputs.provisioning-profile-path }}"
+        if [ ! -f "${INPUT_PROVISIONING_PROFILE_PATH}" ]; then
+          echo "::error file=${INPUT_PROVISIONING_PROFILE_PATH}::Provisioning profile file not found: ${INPUT_PROVISIONING_PROFILE_PATH}"
           exit 1
         fi
 
         # Validate file extension
-        if [[ ! "${{ inputs.provisioning-profile-path }}" =~ \.mobileprovision$ ]]; then
-          echo "::warning::Provisioning profile should have .mobileprovision extension: ${{ inputs.provisioning-profile-path }}"
+        if [[ ! "${INPUT_PROVISIONING_PROFILE_PATH}" =~ \.mobileprovision$ ]]; then
+          echo "::warning::Provisioning profile should have .mobileprovision extension: ${INPUT_PROVISIONING_PROFILE_PATH}"
         fi
 
         echo "✅ Provisioning profile path validation completed successfully"
+      env:
+        INPUT_PROVISIONING_PROFILE_PATH: ${{ inputs.provisioning-profile-path }}
 
     - name: "✅ Validate input : provisioning-profile-data"
       if: ${{ inputs.provisioning-profile-data != '' }}
@@ -257,50 +278,57 @@ runs:
         echo "::debug::Validating provisioning-profile-data input..."
 
         # Validate that both provisioning profile inputs are not provided
-        if [ -n "${{ inputs.provisioning-profile-path }}" ]; then
+        if [ -n "${INPUT_PROVISIONING_PROFILE_PATH}" ]; then
           echo "::error::Only one of provisioning-profile-data or provisioning-profile-path should be provided"
           exit 1
         fi
 
         # Validate base64 format
-        if ! echo "${{ inputs.provisioning-profile-data }}" | base64 --decode >/dev/null 2>&1; then
+        if ! echo "${INPUT_PROVISIONING_PROFILE_DATA}" | base64 --decode >/dev/null 2>&1; then
           echo "::error::Provisioning profile data is not valid base64 format"
           exit 1
         fi
 
         echo "✅ Provisioning profile data validation completed successfully"
+      env:
+        INPUT_PROVISIONING_PROFILE_PATH: ${{ inputs.provisioning-profile-path }}
+        INPUT_PROVISIONING_PROFILE_DATA: ${{ inputs.provisioning-profile-data }}
 
     - name: "✅ Validate input : keychain-name"
       shell: bash
       run: |
-        echo "::debug::Validating keychain-name input: ${{ inputs.keychain-name }}"
+        echo "::debug::Validating keychain-name input: ${INPUT_KEYCHAIN_NAME}"
 
         # Validate keychain name doesn't contain spaces or special characters
-        if [[ "${{ inputs.keychain-name }}" =~ [[:space:]] ]]; then
-          echo "::error::Keychain name cannot contain spaces: ${{ inputs.keychain-name }}"
+        if [[ "${INPUT_KEYCHAIN_NAME}" =~ [[:space:]] ]]; then
+          echo "::error::Keychain name cannot contain spaces: ${INPUT_KEYCHAIN_NAME}"
           exit 1
         fi
 
-        if [[ "${{ inputs.keychain-name }}" =~ [/\\:*?"<>\\|] ]]; then
-          echo "::error::Keychain name contains invalid characters: ${{ inputs.keychain-name }}"
+        if [[ "${INPUT_KEYCHAIN_NAME}" =~ [/\\:*?"<>\\|] ]]; then
+          echo "::error::Keychain name contains invalid characters: ${INPUT_KEYCHAIN_NAME}"
           exit 1
         fi
 
         echo "✅ Keychain name validation completed successfully"
+      env:
+        INPUT_KEYCHAIN_NAME: ${{ inputs.keychain-name }}
 
     - name: "✅ Validate input : team-id"
       if: ${{ inputs.team-id != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating team-id input: ${{ inputs.team-id }}"
+        echo "::debug::Validating team-id input: ${INPUT_TEAM_ID}"
 
         # Validate Team ID format (10 alphanumeric characters)
-        if ! [[ "${{ inputs.team-id }}" =~ ^[A-Z0-9]{10}$ ]]; then
-          echo "::error::Team ID must be exactly 10 alphanumeric characters (uppercase), got: ${{ inputs.team-id }}"
+        if ! [[ "${INPUT_TEAM_ID}" =~ ^[A-Z0-9]{10}$ ]]; then
+          echo "::error::Team ID must be exactly 10 alphanumeric characters (uppercase), got: ${INPUT_TEAM_ID}"
           exit 1
         fi
 
         echo "✅ Team ID validation completed successfully"
+      env:
+        INPUT_TEAM_ID: ${{ inputs.team-id }}
 
     # ================== 🏗️ ==================
 
@@ -317,61 +345,61 @@ runs:
         echo "::debug::Using temporary directory: $TEMP_DIR"
 
         # Define keychain path
-        KEYCHAIN_PATH="$HOME/Library/Keychains/${{ inputs.keychain-name }}-db"
+        KEYCHAIN_PATH="$HOME/Library/Keychains/${INPUT_KEYCHAIN_NAME}-db"
         echo "::debug::Keychain path: $KEYCHAIN_PATH"
         echo "keychain-path=$KEYCHAIN_PATH" >> $GITHUB_OUTPUT
 
         # Create temporary keychain
         echo "::debug::Creating temporary keychain..."
-        if ! security create-keychain -p "${{ inputs.keychain-password }}" "${{ inputs.keychain-name }}"; then
+        if ! security create-keychain -p "${INPUT_KEYCHAIN_PASSWORD}" "${INPUT_KEYCHAIN_NAME}"; then
           echo "::error::Failed to create keychain"
           exit 1
         fi
 
         # Set keychain settings
         echo "::debug::Configuring keychain settings..."
-        security set-keychain-settings -lut 21600 "${{ inputs.keychain-name }}"
-        security default-keychain -s "${{ inputs.keychain-name }}"
-        security unlock-keychain -p "${{ inputs.keychain-password }}" "${{ inputs.keychain-name }}"
+        security set-keychain-settings -lut 21600 "${INPUT_KEYCHAIN_NAME}"
+        security default-keychain -s "${INPUT_KEYCHAIN_NAME}"
+        security unlock-keychain -p "${INPUT_KEYCHAIN_PASSWORD}" "${INPUT_KEYCHAIN_NAME}"
 
         # Handle certificate installation
         CERTIFICATE_FILE=""
-        if [ -n "${{ inputs.certificate-data }}" ]; then
+        if [ -n "${INPUT_CERTIFICATE_DATA}" ]; then
           echo "::debug::Processing base64 encoded certificate..."
           CERTIFICATE_FILE="$TEMP_DIR/certificate.p12"
-          if ! echo "${{ inputs.certificate-data }}" | base64 --decode > "$CERTIFICATE_FILE"; then
+          if ! echo "${INPUT_CERTIFICATE_DATA}" | base64 --decode > "$CERTIFICATE_FILE"; then
             echo "::error::Failed to decode certificate data"
             exit 1
           fi
-        elif [ -n "${{ inputs.certificate-path }}" ]; then
-          echo "::debug::Using certificate file: ${{ inputs.certificate-path }}"
-          CERTIFICATE_FILE="${{ inputs.certificate-path }}"
+        elif [ -n "${INPUT_CERTIFICATE_PATH}" ]; then
+          echo "::debug::Using certificate file: ${INPUT_CERTIFICATE_PATH}"
+          CERTIFICATE_FILE="${INPUT_CERTIFICATE_PATH}"
         fi
 
         # Import certificate
         if [ -n "$CERTIFICATE_FILE" ]; then
           echo "::debug::Importing certificate into keychain..."
-          if ! security import "$CERTIFICATE_FILE" -k "${{ inputs.keychain-name }}" -P "${{ inputs.certificate-password }}" -T /usr/bin/codesign; then
+          if ! security import "$CERTIFICATE_FILE" -k "${INPUT_KEYCHAIN_NAME}" -P "${INPUT_CERTIFICATE_PASSWORD}" -T /usr/bin/codesign; then
             echo "::error::Failed to import certificate"
             exit 1
           fi
 
           # Get certificate information
           echo "::debug::Extracting certificate information..."
-          CERT_SHA1=$(security find-certificate -a -c "iPhone" -Z "${{ inputs.keychain-name }}" 2>/dev/null | grep "SHA-1 hash:" | head -1 | cut -d' ' -f3 || true)
+          CERT_SHA1=$(security find-certificate -a -c "iPhone" -Z "${INPUT_KEYCHAIN_NAME}" 2>/dev/null | grep "SHA-1 hash:" | head -1 | cut -d' ' -f3 || true)
           if [ -z "$CERT_SHA1" ]; then
-            CERT_SHA1=$(security find-certificate -a -c "Mac" -Z "${{ inputs.keychain-name }}" 2>/dev/null | grep "SHA-1 hash:" | head -1 | cut -d' ' -f3 || true)
+            CERT_SHA1=$(security find-certificate -a -c "Mac" -Z "${INPUT_KEYCHAIN_NAME}" 2>/dev/null | grep "SHA-1 hash:" | head -1 | cut -d' ' -f3 || true)
           fi
           if [ -z "$CERT_SHA1" ]; then
-            CERT_SHA1=$(security find-certificate -a -Z "${{ inputs.keychain-name }}" 2>/dev/null | grep "SHA-1 hash:" | head -1 | cut -d' ' -f3 || true)
+            CERT_SHA1=$(security find-certificate -a -Z "${INPUT_KEYCHAIN_NAME}" 2>/dev/null | grep "SHA-1 hash:" | head -1 | cut -d' ' -f3 || true)
           fi
 
-          CERT_NAME=$(security find-certificate -a -c "iPhone" -p "${{ inputs.keychain-name }}" 2>/dev/null | openssl x509 -subject -noout 2>/dev/null | sed 's/^subject.*CN=\([^,]*\).*/\1/' || true)
+          CERT_NAME=$(security find-certificate -a -c "iPhone" -p "${INPUT_KEYCHAIN_NAME}" 2>/dev/null | openssl x509 -subject -noout 2>/dev/null | sed 's/^subject.*CN=\([^,]*\).*/\1/' || true)
           if [ -z "$CERT_NAME" ]; then
-            CERT_NAME=$(security find-certificate -a -c "Mac" -p "${{ inputs.keychain-name }}" 2>/dev/null | openssl x509 -subject -noout 2>/dev/null | sed 's/^subject.*CN=\([^,]*\).*/\1/' || true)
+            CERT_NAME=$(security find-certificate -a -c "Mac" -p "${INPUT_KEYCHAIN_NAME}" 2>/dev/null | openssl x509 -subject -noout 2>/dev/null | sed 's/^subject.*CN=\([^,]*\).*/\1/' || true)
           fi
           if [ -z "$CERT_NAME" ]; then
-            CERT_NAME=$(security find-certificate -a -p "${{ inputs.keychain-name }}" 2>/dev/null | openssl x509 -subject -noout 2>/dev/null | sed 's/^subject.*CN=\([^,]*\).*/\1/' | head -1 || true)
+            CERT_NAME=$(security find-certificate -a -p "${INPUT_KEYCHAIN_NAME}" 2>/dev/null | openssl x509 -subject -noout 2>/dev/null | sed 's/^subject.*CN=\([^,]*\).*/\1/' | head -1 || true)
           fi
 
           echo "certificate-sha1=${CERT_SHA1:-unknown}" >> $GITHUB_OUTPUT
@@ -381,29 +409,29 @@ runs:
 
           # Extract Team ID from certificate if not provided
           EXTRACTED_TEAM_ID=""
-          if [ -z "${{ inputs.team-id }}" ]; then
-            EXTRACTED_TEAM_ID=$(security find-certificate -a -p "${{ inputs.keychain-name }}" 2>/dev/null | openssl x509 -subject -noout 2>/dev/null | grep -o 'OU=[A-Z0-9]\{10\}' | cut -d'=' -f2 | head -1 || true)
+          if [ -z "${INPUT_TEAM_ID}" ]; then
+            EXTRACTED_TEAM_ID=$(security find-certificate -a -p "${INPUT_KEYCHAIN_NAME}" 2>/dev/null | openssl x509 -subject -noout 2>/dev/null | grep -o 'OU=[A-Z0-9]\{10\}' | cut -d'=' -f2 | head -1 || true)
             if [ -n "$EXTRACTED_TEAM_ID" ]; then
               echo "::debug::Extracted Team ID from certificate: $EXTRACTED_TEAM_ID"
               echo "team-id=$EXTRACTED_TEAM_ID" >> $GITHUB_OUTPUT
             fi
           else
-            echo "team-id=${{ inputs.team-id }}" >> $GITHUB_OUTPUT
+            echo "team-id=${INPUT_TEAM_ID}" >> $GITHUB_OUTPUT
           fi
         fi
 
         # Handle provisioning profile installation
         PROFILE_FILE=""
-        if [ -n "${{ inputs.provisioning-profile-data }}" ]; then
+        if [ -n "${INPUT_PROVISIONING_PROFILE_DATA}" ]; then
           echo "::debug::Processing base64 encoded provisioning profile..."
           PROFILE_FILE="$TEMP_DIR/profile.mobileprovision"
-          if ! echo "${{ inputs.provisioning-profile-data }}" | base64 --decode > "$PROFILE_FILE"; then
+          if ! echo "${INPUT_PROVISIONING_PROFILE_DATA}" | base64 --decode > "$PROFILE_FILE"; then
             echo "::error::Failed to decode provisioning profile data"
             exit 1
           fi
-        elif [ -n "${{ inputs.provisioning-profile-path }}" ]; then
-          echo "::debug::Using provisioning profile file: ${{ inputs.provisioning-profile-path }}"
-          PROFILE_FILE="${{ inputs.provisioning-profile-path }}"
+        elif [ -n "${INPUT_PROVISIONING_PROFILE_PATH}" ]; then
+          echo "::debug::Using provisioning profile file: ${INPUT_PROVISIONING_PROFILE_PATH}"
+          PROFILE_FILE="${INPUT_PROVISIONING_PROFILE_PATH}"
         fi
 
         # Install provisioning profile
@@ -437,22 +465,32 @@ runs:
         fi
 
         # Configure keychain for codesign access
-        if [ "${{ inputs.allow-codesign-keychain-access }}" = "true" ]; then
+        if [ "${INPUT_ALLOW_CODESIGN_KEYCHAIN_ACCESS}" = "true" ]; then
           echo "::debug::Configuring keychain for codesign access..."
-          if ! security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${{ inputs.keychain-password }}" "${{ inputs.keychain-name }}"; then
+          if ! security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${INPUT_KEYCHAIN_PASSWORD}" "${INPUT_KEYCHAIN_NAME}"; then
             echo "::warning::Failed to configure keychain for codesign access"
           fi
         fi
 
         # Add keychain to search list
         echo "::debug::Adding keychain to search list..."
-        security list-keychains -d user -s "${{ inputs.keychain-name }}" $(security list-keychains -d user | sed s/\"//g)
+        security list-keychains -d user -s "${INPUT_KEYCHAIN_NAME}" $(security list-keychains -d user | sed s/\"//g)
 
         # Clean up temporary directory
         rm -rf "$TEMP_DIR"
         echo "::debug::Cleaned up temporary files"
 
         echo "✅ Apple certificate and provisioning profile installation completed successfully"
+      env:
+        INPUT_KEYCHAIN_NAME: ${{ inputs.keychain-name }}
+        INPUT_KEYCHAIN_PASSWORD: ${{ inputs.keychain-password }}
+        INPUT_CERTIFICATE_DATA: ${{ inputs.certificate-data }}
+        INPUT_CERTIFICATE_PATH: ${{ inputs.certificate-path }}
+        INPUT_CERTIFICATE_PASSWORD: ${{ inputs.certificate-password }}
+        INPUT_TEAM_ID: ${{ inputs.team-id }}
+        INPUT_PROVISIONING_PROFILE_DATA: ${{ inputs.provisioning-profile-data }}
+        INPUT_PROVISIONING_PROFILE_PATH: ${{ inputs.provisioning-profile-path }}
+        INPUT_ALLOW_CODESIGN_KEYCHAIN_ACCESS: ${{ inputs.allow-codesign-keychain-access }}
 
     # ================== 🔍 ==================
 
@@ -463,13 +501,13 @@ runs:
         echo "::debug::Verifying certificate and provisioning profile installation..."
 
         # Verify certificate installation
-        if security find-certificate -a "${{ inputs.keychain-name }}" >/dev/null 2>&1; then
-          CERT_COUNT=$(security find-certificate -a "${{ inputs.keychain-name }}" 2>/dev/null | grep -c "keychain:" || echo "0")
+        if security find-certificate -a "${INPUT_KEYCHAIN_NAME}" >/dev/null 2>&1; then
+          CERT_COUNT=$(security find-certificate -a "${INPUT_KEYCHAIN_NAME}" 2>/dev/null | grep -c "keychain:" || echo "0")
           echo "✅ Found $CERT_COUNT certificate(s) in keychain"
 
           # List certificates for verification
           echo "::debug::Installed certificates:"
-          security find-certificate -a "${{ inputs.keychain-name }}" -p 2>/dev/null | openssl x509 -subject -noout 2>/dev/null | while read -r line; do
+          security find-certificate -a "${INPUT_KEYCHAIN_NAME}" -p 2>/dev/null | openssl x509 -subject -noout 2>/dev/null | while read -r line; do
             echo "::debug::  🔒 $line"
           done
         else
@@ -485,13 +523,15 @@ runs:
         fi
 
         # Verify keychain is in search list
-        if security list-keychains -d user 2>/dev/null | grep -q "${{ inputs.keychain-name }}"; then
+        if security list-keychains -d user 2>/dev/null | grep -q "${INPUT_KEYCHAIN_NAME}"; then
           echo "✅ Keychain is in search list"
         else
           echo "::warning::Keychain not found in search list"
         fi
 
         echo "✅ Verification completed successfully"
+      env:
+        INPUT_KEYCHAIN_NAME: ${{ inputs.keychain-name }}
 
     - name: "🧹 Cleanup keychain"
       if: ${{ inputs.delete-keychain == 'true' }}
@@ -500,16 +540,18 @@ runs:
         echo "::debug::Cleaning up keychain..."
 
         # Remove keychain from search list
-        if ! security list-keychains -d user -s $(security list-keychains -d user 2>/dev/null | sed s/\"//g | grep -v "${{ inputs.keychain-name }}") 2>/dev/null; then
+        if ! security list-keychains -d user -s $(security list-keychains -d user 2>/dev/null | sed s/\"//g | grep -v "${INPUT_KEYCHAIN_NAME}") 2>/dev/null; then
           echo "::warning::Failed to remove keychain from search list"
         fi
 
         # Delete keychain
-        if ! security delete-keychain "${{ inputs.keychain-name }}" 2>/dev/null; then
+        if ! security delete-keychain "${INPUT_KEYCHAIN_NAME}" 2>/dev/null; then
           echo "::warning::Failed to delete keychain, it may not exist"
         fi
 
         echo "✅ Keychain cleanup completed successfully"
+      env:
+        INPUT_KEYCHAIN_NAME: ${{ inputs.keychain-name }}
 
     # ================== 📊 ==================
 
@@ -517,37 +559,52 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        cat >> $GITHUB_STEP_SUMMARY << EOF
         <details><summary>🔑 Apple Certificate Installation</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 🔑 Keychain Name | `${{ inputs.keychain-name }}` |
-        | 📱 Certificate Type | `${{ inputs.certificate-type }}` |
-        | 🏢 Team ID | `${{ inputs.team-id || 'auto-detected' }}` |
-        | 🔓 Codesign Access | `${{ inputs.allow-codesign-keychain-access }}` |
-        | 🧹 Delete Keychain | `${{ inputs.delete-keychain }}` |
+        | 🔑 Keychain Name | \`${INPUT_KEYCHAIN_NAME}\` |
+        | 📱 Certificate Type | \`${INPUT_CERTIFICATE_TYPE}\` |
+        | 🏢 Team ID | \`${INPUT_TEAM_ID}\` |
+        | 🔓 Codesign Access | \`${INPUT_ALLOW_CODESIGN_KEYCHAIN_ACCESS}\` |
+        | 🧹 Delete Keychain | \`${INPUT_DELETE_KEYCHAIN}\` |
 
         ## 📤 Installation Results
         | Item | Value |
         |------|-------|
-        | 🔑 Keychain Path | `${{ steps.install.outputs.keychain-path }}` |
-        | 🔒 Certificate Name | `${{ steps.install.outputs.certificate-name }}` |
-        | 🔍 Certificate SHA1 | `${{ steps.install.outputs.certificate-sha1 }}` |
-        | 📱 Profile Name | `${{ steps.install.outputs.provisioning-profile-name || 'N/A' }}` |
-        | 🆔 Profile UUID | `${{ steps.install.outputs.provisioning-profile-uuid || 'N/A' }}` |
-        | 🏢 Team ID | `${{ steps.install.outputs.team-id || 'N/A' }}` |
+        | 🔑 Keychain Path | \`${STEP_INSTALL_KEYCHAIN_PATH}\` |
+        | 🔒 Certificate Name | \`${STEP_INSTALL_CERTIFICATE_NAME}\` |
+        | 🔍 Certificate SHA1 | \`${STEP_INSTALL_CERTIFICATE_SHA1}\` |
+        | 📱 Profile Name | \`${STEP_INSTALL_PROVISIONING_PROFILE_NAME}\` |
+        | 🆔 Profile UUID | \`${STEP_INSTALL_PROVISIONING_PROFILE_UUID}\` |
+        | 🏢 Team ID | \`${STEP_INSTALL_TEAM_ID}\` |
 
         ## 🔧 Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 🍎 Certificate Installation | `${{ steps.install.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🔍 Installation Verification | `${{ steps.verify.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🧹 Keychain Cleanup | `${{ inputs.delete-keychain == 'true' && '✅ Completed' || '⏭️ Skipped' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 🍎 Certificate Installation | \`${STEP_INSTALL_OUTCOME_LABEL}\` |
+        | 🔍 Installation Verification | \`${STEP_VERIFY_OUTCOME_LABEL}\` |
+        | 🧹 Keychain Cleanup | \`${INPUT_DELETE_KEYCHAIN_LABEL}\` |
         </details>
         EOF
+      env:
+        INPUT_KEYCHAIN_NAME: ${{ inputs.keychain-name }}
+        INPUT_CERTIFICATE_TYPE: ${{ inputs.certificate-type }}
+        INPUT_TEAM_ID: ${{ inputs.team-id || 'auto-detected' }}
+        INPUT_ALLOW_CODESIGN_KEYCHAIN_ACCESS: ${{ inputs.allow-codesign-keychain-access }}
+        INPUT_DELETE_KEYCHAIN: ${{ inputs.delete-keychain }}
+        STEP_INSTALL_KEYCHAIN_PATH: ${{ steps.install.outputs.keychain-path }}
+        STEP_INSTALL_CERTIFICATE_NAME: ${{ steps.install.outputs.certificate-name }}
+        STEP_INSTALL_CERTIFICATE_SHA1: ${{ steps.install.outputs.certificate-sha1 }}
+        STEP_INSTALL_PROVISIONING_PROFILE_NAME: ${{ steps.install.outputs.provisioning-profile-name || 'N/A' }}
+        STEP_INSTALL_PROVISIONING_PROFILE_UUID: ${{ steps.install.outputs.provisioning-profile-uuid || 'N/A' }}
+        STEP_INSTALL_TEAM_ID: ${{ steps.install.outputs.team-id || 'N/A' }}
+        STEP_INSTALL_OUTCOME_LABEL: ${{ steps.install.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_VERIFY_OUTCOME_LABEL: ${{ steps.verify.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        INPUT_DELETE_KEYCHAIN_LABEL: ${{ inputs.delete-keychain == 'true' && '✅ Completed' || '⏭️ Skipped' }}
 
 branding:
   icon: "shield"

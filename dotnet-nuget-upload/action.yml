@@ -83,14 +83,17 @@ runs:
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        if [ -n "${{ inputs.api-key }}" ]; then
-          echo "::add-mask::${{ inputs.api-key }}"
+        if [ -n "${INPUT_API_KEY}" ]; then
+          echo "::add-mask::${INPUT_API_KEY}"
         fi
-        if [ -n "${{ inputs.symbol-api-key }}" ]; then
-          echo "::add-mask::${{ inputs.symbol-api-key }}"
+        if [ -n "${INPUT_SYMBOL_API_KEY}" ]; then
+          echo "::add-mask::${INPUT_SYMBOL_API_KEY}"
         fi
 
         echo "✅ Masked sensitive inputs"
+      env:
+        INPUT_API_KEY: ${{ inputs.api-key }}
+        INPUT_SYMBOL_API_KEY: ${{ inputs.symbol-api-key }}
 
     # ================== 📁 ==================
 
@@ -109,9 +112,9 @@ runs:
 
         for param in skip-duplicate no-symbols force-english-output; do
           case $param in
-            skip-duplicate) value="${{ inputs.skip-duplicate }}" ;;
-            no-symbols) value="${{ inputs.no-symbols }}" ;;
-            force-english-output) value="${{ inputs.force-english-output }}" ;;
+            skip-duplicate) value="${INPUT_SKIP_DUPLICATE}" ;;
+            no-symbols) value="${INPUT_NO_SYMBOLS}" ;;
+            force-english-output) value="${INPUT_FORCE_ENGLISH_OUTPUT}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -120,34 +123,42 @@ runs:
         done
 
         echo "::debug::Boolean inputs validation completed successfully"
+      env:
+        INPUT_SKIP_DUPLICATE: ${{ inputs.skip-duplicate }}
+        INPUT_NO_SYMBOLS: ${{ inputs.no-symbols }}
+        INPUT_FORCE_ENGLISH_OUTPUT: ${{ inputs.force-english-output }}
 
 
     - name: "✅ Validate input : package-path"
       shell: bash
       run: |
-        echo "::debug::Validating package-path input: ${{ steps.normalize-package-path.outputs.normalized }}"
+        echo "::debug::Validating package-path input: ${STEP_NORMALIZE_PACKAGE_PATH_NORMALIZED}"
 
         # Validate package path is not empty
-        if [ -z "${{ steps.normalize-package-path.outputs.normalized }}" ]; then
+        if [ -z "${STEP_NORMALIZE_PACKAGE_PATH_NORMALIZED}" ]; then
           echo "::error::Package path cannot be empty"
           exit 1
         fi
 
         echo "::debug::Package path validation completed successfully"
+      env:
+        STEP_NORMALIZE_PACKAGE_PATH_NORMALIZED: ${{ steps.normalize-package-path.outputs.normalized }}
 
     - name: "✅ Validate input : timeout"
       shell: bash
       run: |
-        echo "::debug::Validating timeout input: ${{ inputs.timeout }}"
+        echo "::debug::Validating timeout input: ${INPUT_TIMEOUT}"
 
-        if [ -n "${{ inputs.timeout }}" ]; then
-          if ! [[ "${{ inputs.timeout }}" =~ ^[0-9]+$ ]]; then
-            echo "::error::Timeout must be a positive number: ${{ inputs.timeout }}"
+        if [ -n "${INPUT_TIMEOUT}" ]; then
+          if ! [[ "${INPUT_TIMEOUT}" =~ ^[0-9]+$ ]]; then
+            echo "::error::Timeout must be a positive number: ${INPUT_TIMEOUT}"
             exit 1
           fi
         fi
 
         echo "::debug::Timeout validation completed successfully"
+      env:
+        INPUT_TIMEOUT: ${{ inputs.timeout }}
 
     # ================== 🏗️ ==================
 
@@ -158,15 +169,15 @@ runs:
         echo "::debug::Building argument list for NuGet package upload"
 
         # Start with base arguments
-        ARGUMENTS="push '${{ steps.normalize-package-path.outputs.normalized }}'"
+        ARGUMENTS="push '${STEP_NORMALIZE_PACKAGE_PATH_NORMALIZED}'"
 
         # Key-value options
         for param in source api-key symbol-source symbol-api-key; do
           case $param in
-            source) value="${{ inputs.source }}" ;;
-            api-key) value="${{ inputs.api-key }}" ;;
-            symbol-source) value="${{ inputs.symbol-source }}" ;;
-            symbol-api-key) value="${{ inputs.symbol-api-key }}" ;;
+            source) value="${INPUT_SOURCE}" ;;
+            api-key) value="${INPUT_API_KEY}" ;;
+            symbol-source) value="${INPUT_SYMBOL_SOURCE}" ;;
+            symbol-api-key) value="${INPUT_SYMBOL_API_KEY}" ;;
           esac
           if [ -n "$value" ]; then
             ARGUMENTS="$ARGUMENTS --$param '$value'"
@@ -174,16 +185,16 @@ runs:
         done
 
         # Timeout (only if different from default)
-        if [ "${{ inputs.timeout }}" != "300" ]; then
-          ARGUMENTS="$ARGUMENTS --timeout ${{ inputs.timeout }}"
+        if [ "${INPUT_TIMEOUT}" != "300" ]; then
+          ARGUMENTS="$ARGUMENTS --timeout ${INPUT_TIMEOUT}"
         fi
 
         # Boolean flags
         for param in skip-duplicate no-symbols force-english-output; do
           case $param in
-            skip-duplicate) value="${{ inputs.skip-duplicate }}" ;;
-            no-symbols) value="${{ inputs.no-symbols }}" ;;
-            force-english-output) value="${{ inputs.force-english-output }}" ;;
+            skip-duplicate) value="${INPUT_SKIP_DUPLICATE}" ;;
+            no-symbols) value="${INPUT_NO_SYMBOLS}" ;;
+            force-english-output) value="${INPUT_FORCE_ENGLISH_OUTPUT}" ;;
           esac
           if [ "$value" = "true" ]; then
             ARGUMENTS="$ARGUMENTS --${param}"
@@ -195,6 +206,16 @@ runs:
 
         echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
         echo "::debug::Argument list built successfully: $ARGUMENTS"
+      env:
+        STEP_NORMALIZE_PACKAGE_PATH_NORMALIZED: ${{ steps.normalize-package-path.outputs.normalized }}
+        INPUT_SOURCE: ${{ inputs.source }}
+        INPUT_API_KEY: ${{ inputs.api-key }}
+        INPUT_SYMBOL_SOURCE: ${{ inputs.symbol-source }}
+        INPUT_SYMBOL_API_KEY: ${{ inputs.symbol-api-key }}
+        INPUT_TIMEOUT: ${{ inputs.timeout }}
+        INPUT_SKIP_DUPLICATE: ${{ inputs.skip-duplicate }}
+        INPUT_NO_SYMBOLS: ${{ inputs.no-symbols }}
+        INPUT_FORCE_ENGLISH_OUTPUT: ${{ inputs.force-english-output }}
 
     # ================== 🚀 ==================
 
@@ -217,15 +238,17 @@ runs:
         echo "::debug::Verifying package upload results..."
 
         # Check if the dotnet push command succeeded
-        if [ "${{ steps.run-dotnet.outputs.exit-code }}" = "0" ]; then
+        if [ "${STEP_RUN_DOTNET_EXIT_CODE}" = "0" ]; then
           echo "✅ Package upload completed successfully"
           echo "upload-success=true" >> $GITHUB_OUTPUT
         else
-          echo "❌ Package upload failed with exit code: ${{ steps.run-dotnet.outputs.exit-code }}"
+          echo "❌ Package upload failed with exit code: ${STEP_RUN_DOTNET_EXIT_CODE}"
           echo "upload-success=false" >> $GITHUB_OUTPUT
         fi
 
         echo "::debug::Package upload verification completed"
+      env:
+        STEP_RUN_DOTNET_EXIT_CODE: ${{ steps.run-dotnet.outputs.exit-code }}
 
     # ================== 📊 ==================
 
@@ -233,39 +256,55 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>📦 NuGet Upload : ${{ steps.normalize-package-path.outputs.normalized }}</summary>
+        cat >> $GITHUB_STEP_SUMMARY << EOF
+        <details><summary>📦 NuGet Upload : ${STEP_NORMALIZE_PACKAGE_PATH_NORMALIZED}</summary>
 
         ## 🔧 NuGet Upload Specific Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 📦 Package Path | `${{ steps.normalize-package-path.outputs.normalized }}` |
-        | 🔗 Source | `${{ inputs.source || 'default' }}` |
-        | 🔑 API Key | `${{ inputs.api-key != '' && '***configured***' || 'not provided' }}` |
-        | 🔣 Symbol Source | `${{ inputs.symbol-source || 'none' }}` |
-        | 🔑 Symbol API Key | `${{ inputs.symbol-api-key != '' && '***configured***' || 'not provided' }}` |
-        | ⏱️ Timeout | `${{ inputs.timeout }}s` |
-        | � Skip Duplicate | `${{ inputs.skip-duplicate }}` |
-        | 🚫 No Symbols | `${{ inputs.no-symbols }}` |
-        | 🌍 Force English | `${{ inputs.force-english-output }}` |
+        | 📦 Package Path | \`${STEP_NORMALIZE_PACKAGE_PATH_NORMALIZED}\` |
+        | 🔗 Source | \`${INPUT_SOURCE}\` |
+        | 🔑 API Key | \`${INPUT_API_KEY_LABEL}\` |
+        | 🔣 Symbol Source | \`${INPUT_SYMBOL_SOURCE}\` |
+        | 🔑 Symbol API Key | \`${INPUT_SYMBOL_API_KEY_LABEL}\` |
+        | ⏱️ Timeout | \`${INPUT_TIMEOUT}s\` |
+        | � Skip Duplicate | \`${INPUT_SKIP_DUPLICATE}\` |
+        | 🚫 No Symbols | \`${INPUT_NO_SYMBOLS}\` |
+        | 🌍 Force English | \`${INPUT_FORCE_ENGLISH_OUTPUT}\` |
 
         ## ⚙️ Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 🔨 Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | ⚙️ Base Action Execution | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🔍 Upload Verification | `${{ steps.verify-upload.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 🔨 Argument Building | \`${STEP_BUILD_ARGS_OUTCOME_LABEL}\` |
+        | ⚙️ Base Action Execution | \`${STEP_RUN_DOTNET_OUTCOME_LABEL}\` |
+        | 🔍 Upload Verification | \`${STEP_VERIFY_UPLOAD_OUTCOME_LABEL}\` |
 
         ## 📤 Execution Results
         | Metric | Value |
         |--------|-------|
-        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
-        | 📦 Upload Success | `${{ steps.verify-upload.outputs.upload-success }}` |
-        | 🔄 Executed Command | `${{ steps.run-dotnet.outputs.executed-command }}` |
+        | ✅ Exit Code | \`${STEP_RUN_DOTNET_EXIT_CODE}\` |
+        | 📦 Upload Success | \`${STEP_VERIFY_UPLOAD_UPLOAD_SUCCESS}\` |
+        | 🔄 Executed Command | \`${STEP_RUN_DOTNET_EXECUTED_COMMAND}\` |
 
         </details>
         EOF
+      env:
+        STEP_NORMALIZE_PACKAGE_PATH_NORMALIZED: ${{ steps.normalize-package-path.outputs.normalized }}
+        INPUT_SOURCE: ${{ inputs.source || 'default' }}
+        INPUT_API_KEY_LABEL: ${{ inputs.api-key != '' && '***configured***' || 'not provided' }}
+        INPUT_SYMBOL_SOURCE: ${{ inputs.symbol-source || 'none' }}
+        INPUT_SYMBOL_API_KEY_LABEL: ${{ inputs.symbol-api-key != '' && '***configured***' || 'not provided' }}
+        INPUT_TIMEOUT: ${{ inputs.timeout }}
+        INPUT_SKIP_DUPLICATE: ${{ inputs.skip-duplicate }}
+        INPUT_NO_SYMBOLS: ${{ inputs.no-symbols }}
+        INPUT_FORCE_ENGLISH_OUTPUT: ${{ inputs.force-english-output }}
+        STEP_BUILD_ARGS_OUTCOME_LABEL: ${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_RUN_DOTNET_OUTCOME_LABEL: ${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_VERIFY_UPLOAD_OUTCOME_LABEL: ${{ steps.verify-upload.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_RUN_DOTNET_EXIT_CODE: ${{ steps.run-dotnet.outputs.exit-code }}
+        STEP_VERIFY_UPLOAD_UPLOAD_SUCCESS: ${{ steps.verify-upload.outputs.upload-success }}
+        STEP_RUN_DOTNET_EXECUTED_COMMAND: ${{ steps.run-dotnet.outputs.executed-command }}
 
 branding:
   icon: "upload"

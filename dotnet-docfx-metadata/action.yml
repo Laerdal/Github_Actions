@@ -156,13 +156,13 @@ runs:
 
         for param in verbose warningsAsErrors shouldSkipMarkup disableGitFeatures disableDefaultFilter noRestore useClrTypeNames; do
           case $param in
-            verbose) value="${{ inputs.verbose }}" ;;
-            warningsAsErrors) value="${{ inputs.warningsAsErrors }}" ;;
-            shouldSkipMarkup) value="${{ inputs.shouldSkipMarkup }}" ;;
-            disableGitFeatures) value="${{ inputs.disableGitFeatures }}" ;;
-            disableDefaultFilter) value="${{ inputs.disableDefaultFilter }}" ;;
-            noRestore) value="${{ inputs.noRestore }}" ;;
-            useClrTypeNames) value="${{ inputs.useClrTypeNames }}" ;;
+            verbose) value="${INPUT_VERBOSE}" ;;
+            warningsAsErrors) value="${INPUT_WARNINGSASERRORS}" ;;
+            shouldSkipMarkup) value="${INPUT_SHOULDSKIPMARKUP}" ;;
+            disableGitFeatures) value="${INPUT_DISABLEGITFEATURES}" ;;
+            disableDefaultFilter) value="${INPUT_DISABLEDEFAULTFILTER}" ;;
+            noRestore) value="${INPUT_NORESTORE}" ;;
+            useClrTypeNames) value="${INPUT_USECLRTYPENAMES}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -171,6 +171,14 @@ runs:
         done
 
         echo "✅ Boolean input validation completed successfully"
+      env:
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+        INPUT_WARNINGSASERRORS: ${{ inputs.warningsAsErrors }}
+        INPUT_SHOULDSKIPMARKUP: ${{ inputs.shouldSkipMarkup }}
+        INPUT_DISABLEGITFEATURES: ${{ inputs.disableGitFeatures }}
+        INPUT_DISABLEDEFAULTFILTER: ${{ inputs.disableDefaultFilter }}
+        INPUT_NORESTORE: ${{ inputs.noRestore }}
+        INPUT_USECLRTYPENAMES: ${{ inputs.useClrTypeNames }}
 
     - name: "✅ Validate input : config"
       if: ${{ inputs.config != '' }}
@@ -178,12 +186,14 @@ runs:
       run: |
         echo "::debug::Validating config input for DocFX metadata generation"
 
-        if [ ! -f "${{ steps.normalize-config.outputs.normalized }}" ]; then
-          echo "::error file=${{ steps.normalize-config.outputs.normalized }}::DocFX configuration file not found: ${{ steps.normalize-config.outputs.normalized }}"
+        if [ ! -f "${STEP_NORMALIZE_CONFIG_NORMALIZED}" ]; then
+          echo "::error file=${STEP_NORMALIZE_CONFIG_NORMALIZED}::DocFX configuration file not found: ${STEP_NORMALIZE_CONFIG_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Config input validation completed successfully"
+      env:
+        STEP_NORMALIZE_CONFIG_NORMALIZED: ${{ steps.normalize-config.outputs.normalized }}
 
     - name: "✅ Validate input : logLevel"
       if: ${{ inputs.logLevel != '' && inputs.logLevel != 'info' }}
@@ -191,12 +201,14 @@ runs:
       run: |
         echo "::debug::Validating logLevel input for DocFX metadata generation"
 
-        case "${{ inputs.logLevel }}" in
+        case "${INPUT_LOGLEVEL}" in
           error|warning|info|verbose|diagnostic) ;;
           *) echo "::error::Invalid logLevel. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
         esac
 
         echo "✅ Log-level input validation completed successfully"
+      env:
+        INPUT_LOGLEVEL: ${{ inputs.logLevel }}
 
     - name: "✅ Validate input : outputFormat"
       if: ${{ inputs.outputFormat != '' && inputs.outputFormat != 'mref' }}
@@ -204,12 +216,14 @@ runs:
       run: |
         echo "::debug::Validating outputFormat input for DocFX metadata generation"
 
-        case "${{ inputs.outputFormat }}" in
+        case "${INPUT_OUTPUTFORMAT}" in
           mref|markdown|apiPage) ;;
           *) echo "::error::Invalid output format. Must be one of: mref, markdown, apiPage"; exit 1 ;;
         esac
 
         echo "✅ Output format validation completed successfully"
+      env:
+        INPUT_OUTPUTFORMAT: ${{ inputs.outputFormat }}
 
     - name: "✅ Validate input : namespaceLayout"
       if: ${{ inputs.namespaceLayout != '' && inputs.namespaceLayout != 'Flattened' }}
@@ -217,12 +231,14 @@ runs:
       run: |
         echo "::debug::Validating namespaceLayout input for DocFX metadata generation"
 
-        case "${{ inputs.namespaceLayout }}" in
+        case "${INPUT_NAMESPACELAYOUT}" in
           Flattened|Nested) ;;
           *) echo "::error::Invalid namespace layout. Must be one of: Flattened, Nested"; exit 1 ;;
         esac
 
         echo "✅ Namespace layout validation completed successfully"
+      env:
+        INPUT_NAMESPACELAYOUT: ${{ inputs.namespaceLayout }}
 
     - name: "✅ Validate input : memberLayout"
       if: ${{ inputs.memberLayout != '' && inputs.memberLayout != 'SamePage' }}
@@ -230,12 +246,14 @@ runs:
       run: |
         echo "::debug::Validating memberLayout input for DocFX metadata generation"
 
-        case "${{ inputs.memberLayout }}" in
+        case "${INPUT_MEMBERLAYOUT}" in
           SamePage|SeparatePages) ;;
           *) echo "::error::Invalid member layout. Must be one of: SamePage, SeparatePages"; exit 1 ;;
         esac
 
         echo "✅ Member layout validation completed successfully"
+      env:
+        INPUT_MEMBERLAYOUT: ${{ inputs.memberLayout }}
 
     - name: "✅ Validate input : property"
       if: ${{ inputs.property != '' }}
@@ -243,12 +261,14 @@ runs:
       run: |
         echo "::debug::Validating property input for DocFX metadata generation"
 
-        if ! echo "${{ inputs.property }}" | jq empty >/dev/null 2>&1; then
-          echo "::error::Property must be a valid JSON string, got: ${{ inputs.property }}"
+        if ! echo "${INPUT_PROPERTY}" | jq empty >/dev/null 2>&1; then
+          echo "::error::Property must be a valid JSON string, got: ${INPUT_PROPERTY}"
           exit 1
         fi
 
         echo "✅ Property input validation completed successfully"
+      env:
+        INPUT_PROPERTY: ${{ inputs.property }}
 
     - name: "✅ Validate input : filter"
       if: ${{ inputs.filter != '' }}
@@ -256,12 +276,14 @@ runs:
       run: |
         echo "::debug::Validating filter input for DocFX metadata generation"
 
-        if [ ! -f "${{ steps.normalize-filter.outputs.normalized }}" ]; then
-          echo "::error file=${{ steps.normalize-filter.outputs.normalized }}::Filter config file not found: ${{ steps.normalize-filter.outputs.normalized }}"
+        if [ ! -f "${STEP_NORMALIZE_FILTER_NORMALIZED}" ]; then
+          echo "::error file=${STEP_NORMALIZE_FILTER_NORMALIZED}::Filter config file not found: ${STEP_NORMALIZE_FILTER_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Filter input validation completed successfully"
+      env:
+        STEP_NORMALIZE_FILTER_NORMALIZED: ${{ steps.normalize-filter.outputs.normalized }}
 
     - name: "✅ Validate input : docfx-version"
       if: ${{ inputs.docfx-version != '' }}
@@ -269,11 +291,13 @@ runs:
       run: |
         echo "::debug::Validating docfx-version input for DocFX metadata generation"
 
-        if ! [[ "${{ inputs.docfx-version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "::warning::Version format may be invalid. Expected format: X.Y.Z, got: ${{ inputs.docfx-version }}"
+        if ! [[ "${INPUT_DOCFX_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::warning::Version format may be invalid. Expected format: X.Y.Z, got: ${INPUT_DOCFX_VERSION}"
         fi
 
         echo "✅ docfx-version input validation completed successfully"
+      env:
+        INPUT_DOCFX_VERSION: ${{ inputs.docfx-version }}
 
     # ================== 🏗️ ==================
 
@@ -287,18 +311,18 @@ runs:
         ARGS="run docfx metadata"
 
         # Add config file path
-        if [ -n "${{ steps.normalize-config.outputs.normalized }}" ]; then
-          ARGS="$ARGS '${{ steps.normalize-config.outputs.normalized }}'"
+        if [ -n "${STEP_NORMALIZE_CONFIG_NORMALIZED}" ]; then
+          ARGS="$ARGS '${STEP_NORMALIZE_CONFIG_NORMALIZED}'"
         fi
 
         # Key-value options (only add if not empty)
         for param in filter globalNamespaceId output log property; do
           case $param in
-            filter) value="${{ steps.normalize-filter.outputs.normalized }}" ;;
-            globalNamespaceId) value="${{ inputs.globalNamespaceId }}" ;;
-            output) value="${{ steps.normalize-output.outputs.normalized }}" ;;
-            log) value="${{ steps.normalize-logfile.outputs.normalized }}" ;;
-            property) value="${{ inputs.property }}" ;;
+            filter) value="${STEP_NORMALIZE_FILTER_NORMALIZED}" ;;
+            globalNamespaceId) value="${INPUT_GLOBALNAMESPACEID}" ;;
+            output) value="${STEP_NORMALIZE_OUTPUT_NORMALIZED}" ;;
+            log) value="${STEP_NORMALIZE_LOGFILE_NORMALIZED}" ;;
+            property) value="${INPUT_PROPERTY}" ;;
           esac
           if [ -n "$value" ]; then
             ARGS="$ARGS --$param '$value'"
@@ -308,13 +332,13 @@ runs:
         # Boolean flags
         for param in verbose warningsAsErrors shouldSkipMarkup disableGitFeatures disableDefaultFilter noRestore useClrTypeNames; do
           case $param in
-            verbose) value="${{ inputs.verbose }}" ;;
-            warningsAsErrors) value="${{ inputs.warningsAsErrors }}" ;;
-            shouldSkipMarkup) value="${{ inputs.shouldSkipMarkup }}" ;;
-            disableGitFeatures) value="${{ inputs.disableGitFeatures }}" ;;
-            disableDefaultFilter) value="${{ inputs.disableDefaultFilter }}" ;;
-            noRestore) value="${{ inputs.noRestore }}" ;;
-            useClrTypeNames) value="${{ inputs.useClrTypeNames }}" ;;
+            verbose) value="${INPUT_VERBOSE}" ;;
+            warningsAsErrors) value="${INPUT_WARNINGSASERRORS}" ;;
+            shouldSkipMarkup) value="${INPUT_SHOULDSKIPMARKUP}" ;;
+            disableGitFeatures) value="${INPUT_DISABLEGITFEATURES}" ;;
+            disableDefaultFilter) value="${INPUT_DISABLEDEFAULTFILTER}" ;;
+            noRestore) value="${INPUT_NORESTORE}" ;;
+            useClrTypeNames) value="${INPUT_USECLRTYPENAMES}" ;;
           esac
           if [ "$value" == "true" ]; then
             ARGS="$ARGS --${param}"
@@ -322,25 +346,43 @@ runs:
         done
 
         # Handle parameters with meaningful defaults
-        if [ "${{ inputs.logLevel }}" != "info" ]; then
-          ARGS="$ARGS --logLevel '${{ inputs.logLevel }}'"
+        if [ "${INPUT_LOGLEVEL}" != "info" ]; then
+          ARGS="$ARGS --logLevel '${INPUT_LOGLEVEL}'"
         fi
 
-        if [ "${{ inputs.outputFormat }}" != "mref" ]; then
-          ARGS="$ARGS --outputFormat '${{ inputs.outputFormat }}'"
+        if [ "${INPUT_OUTPUTFORMAT}" != "mref" ]; then
+          ARGS="$ARGS --outputFormat '${INPUT_OUTPUTFORMAT}'"
         fi
 
-        if [ "${{ inputs.namespaceLayout }}" != "Flattened" ]; then
-          ARGS="$ARGS --namespaceLayout '${{ inputs.namespaceLayout }}'"
+        if [ "${INPUT_NAMESPACELAYOUT}" != "Flattened" ]; then
+          ARGS="$ARGS --namespaceLayout '${INPUT_NAMESPACELAYOUT}'"
         fi
 
-        if [ "${{ inputs.memberLayout }}" != "SamePage" ]; then
-          ARGS="$ARGS --memberLayout '${{ inputs.memberLayout }}'"
+        if [ "${INPUT_MEMBERLAYOUT}" != "SamePage" ]; then
+          ARGS="$ARGS --memberLayout '${INPUT_MEMBERLAYOUT}'"
         fi
 
         echo "::debug::Generated arguments: $ARGS"
         echo "arguments=$ARGS" >> $GITHUB_OUTPUT
         echo "✅ Arguments built successfully"
+      env:
+        STEP_NORMALIZE_CONFIG_NORMALIZED: ${{ steps.normalize-config.outputs.normalized }}
+        STEP_NORMALIZE_FILTER_NORMALIZED: ${{ steps.normalize-filter.outputs.normalized }}
+        INPUT_GLOBALNAMESPACEID: ${{ inputs.globalNamespaceId }}
+        STEP_NORMALIZE_OUTPUT_NORMALIZED: ${{ steps.normalize-output.outputs.normalized }}
+        STEP_NORMALIZE_LOGFILE_NORMALIZED: ${{ steps.normalize-logfile.outputs.normalized }}
+        INPUT_PROPERTY: ${{ inputs.property }}
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+        INPUT_WARNINGSASERRORS: ${{ inputs.warningsAsErrors }}
+        INPUT_SHOULDSKIPMARKUP: ${{ inputs.shouldSkipMarkup }}
+        INPUT_DISABLEGITFEATURES: ${{ inputs.disableGitFeatures }}
+        INPUT_DISABLEDEFAULTFILTER: ${{ inputs.disableDefaultFilter }}
+        INPUT_NORESTORE: ${{ inputs.noRestore }}
+        INPUT_USECLRTYPENAMES: ${{ inputs.useClrTypeNames }}
+        INPUT_LOGLEVEL: ${{ inputs.logLevel }}
+        INPUT_OUTPUTFORMAT: ${{ inputs.outputFormat }}
+        INPUT_NAMESPACELAYOUT: ${{ inputs.namespaceLayout }}
+        INPUT_MEMBERLAYOUT: ${{ inputs.memberLayout }}
 
     # ================== 🚀 ==================
 
@@ -367,45 +409,61 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        cat >> $GITHUB_STEP_SUMMARY << EOF
         <details><summary>📄 DocFX Metadata</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 📋 Config File | `${{ steps.normalize-config.outputs.normalized }}` |
-        | 📁 Output Directory | `${{ steps.normalize-output.outputs.normalized }}` |
-        | 📊 Log Level | `${{ inputs.logLevel }}` |
-        | 📄 Log File | `${{ steps.normalize-logfile.outputs.normalized }}` |
-        | 📄 Output Format | `${{ inputs.outputFormat }}` |
-        | 🌐 Namespace Layout | `${{ inputs.namespaceLayout }}` |
-        | 👥 Member Layout | `${{ inputs.memberLayout }}` |
+        | 📋 Config File | \`${STEP_NORMALIZE_CONFIG_NORMALIZED}\` |
+        | 📁 Output Directory | \`${STEP_NORMALIZE_OUTPUT_NORMALIZED}\` |
+        | 📊 Log Level | \`${INPUT_LOGLEVEL}\` |
+        | 📄 Log File | \`${STEP_NORMALIZE_LOGFILE_NORMALIZED}\` |
+        | 📄 Output Format | \`${INPUT_OUTPUTFORMAT}\` |
+        | 🌐 Namespace Layout | \`${INPUT_NAMESPACELAYOUT}\` |
+        | 👥 Member Layout | \`${INPUT_MEMBERLAYOUT}\` |
 
         ## 📤 Generation Results
         | Metric | Value |
         |--------|-------|
-        | 📄 Output Format | `${{ inputs.outputFormat }}` |
+        | 📄 Output Format | \`${INPUT_OUTPUTFORMAT}\` |
 
         ## ⚙️ Configuration Options
         | Option | Status |
         |--------|--------|
-        | 🔍 Verbose Logging | `${{ inputs.verbose }}` |
-        | ⚠️ Warnings as Errors | `${{ inputs.warningsAsErrors }}` |
-        | 📝 Skip Markup | `${{ inputs.shouldSkipMarkup }}` |
-        | 🚫 Disable Git Features | `${{ inputs.disableGitFeatures }}` |
-        | 🚫 Disable Default Filter | `${{ inputs.disableDefaultFilter }}` |
-        | 🚫 No Restore | `${{ inputs.noRestore }}` |
-        | 🔤 Use CLR Type Names | `${{ inputs.useClrTypeNames }}` |
+        | 🔍 Verbose Logging | \`${INPUT_VERBOSE}\` |
+        | ⚠️ Warnings as Errors | \`${INPUT_WARNINGSASERRORS}\` |
+        | 📝 Skip Markup | \`${INPUT_SHOULDSKIPMARKUP}\` |
+        | 🚫 Disable Git Features | \`${INPUT_DISABLEGITFEATURES}\` |
+        | 🚫 Disable Default Filter | \`${INPUT_DISABLEDEFAULTFILTER}\` |
+        | 🚫 No Restore | \`${INPUT_NORESTORE}\` |
+        | 🔤 Use CLR Type Names | \`${INPUT_USECLRTYPENAMES}\` |
 
         ## 🔧 Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 📦 Tool Installation | `✅ Completed` |
-        | 📖 Metadata Generation | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 📦 Tool Installation | \`✅ Completed\` |
+        | 📖 Metadata Generation | \`${STEP_RUN_DOTNET_OUTCOME_LABEL}\` |
 
         </details>
         EOF
+      env:
+        STEP_NORMALIZE_CONFIG_NORMALIZED: ${{ steps.normalize-config.outputs.normalized }}
+        STEP_NORMALIZE_OUTPUT_NORMALIZED: ${{ steps.normalize-output.outputs.normalized }}
+        INPUT_LOGLEVEL: ${{ inputs.logLevel }}
+        STEP_NORMALIZE_LOGFILE_NORMALIZED: ${{ steps.normalize-logfile.outputs.normalized }}
+        INPUT_OUTPUTFORMAT: ${{ inputs.outputFormat }}
+        INPUT_NAMESPACELAYOUT: ${{ inputs.namespaceLayout }}
+        INPUT_MEMBERLAYOUT: ${{ inputs.memberLayout }}
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+        INPUT_WARNINGSASERRORS: ${{ inputs.warningsAsErrors }}
+        INPUT_SHOULDSKIPMARKUP: ${{ inputs.shouldSkipMarkup }}
+        INPUT_DISABLEGITFEATURES: ${{ inputs.disableGitFeatures }}
+        INPUT_DISABLEDEFAULTFILTER: ${{ inputs.disableDefaultFilter }}
+        INPUT_NORESTORE: ${{ inputs.noRestore }}
+        INPUT_USECLRTYPENAMES: ${{ inputs.useClrTypeNames }}
+        STEP_RUN_DOTNET_OUTCOME_LABEL: ${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
 
 branding:
   icon: "file-text"

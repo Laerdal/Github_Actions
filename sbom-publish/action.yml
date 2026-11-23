@@ -107,11 +107,13 @@ runs:
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        if [ -n "${{ inputs.dependency-tracker-api-key }}" ]; then
-          echo "::add-mask::${{ inputs.dependency-tracker-api-key }}"
+        if [ -n "${INPUT_DEPENDENCY_TRACKER_API_KEY}" ]; then
+          echo "::add-mask::${INPUT_DEPENDENCY_TRACKER_API_KEY}"
         fi
 
         echo "::debug::Masked sensitive inputs"
+      env:
+        INPUT_DEPENDENCY_TRACKER_API_KEY: ${{ inputs.dependency-tracker-api-key }}
 
     # ================== 📁 ==================
 
@@ -131,11 +133,11 @@ runs:
 
         for param in sbom-file-path project-name project-version dependency-tracker-url dependency-tracker-api-key; do
           case $param in
-            sbom-file-path) value="${{ inputs.sbom-file-path }}" ;;
-            project-name) value="${{ inputs.project-name }}" ;;
-            project-version) value="${{ inputs.project-version }}" ;;
-            dependency-tracker-url) value="${{ inputs.dependency-tracker-url }}" ;;
-            dependency-tracker-api-key) value="${{ inputs.dependency-tracker-api-key }}" ;;
+            sbom-file-path) value="${INPUT_SBOM_FILE_PATH}" ;;
+            project-name) value="${INPUT_PROJECT_NAME}" ;;
+            project-version) value="${INPUT_PROJECT_VERSION}" ;;
+            dependency-tracker-url) value="${INPUT_DEPENDENCY_TRACKER_URL}" ;;
+            dependency-tracker-api-key) value="${INPUT_DEPENDENCY_TRACKER_API_KEY}" ;;
           esac
           if [ -z "$value" ]; then
             echo "::error::Parameter $param is required but was not provided."
@@ -149,6 +151,12 @@ runs:
         fi
 
         echo "✅ Required input validation passed"
+      env:
+        INPUT_SBOM_FILE_PATH: ${{ inputs.sbom-file-path }}
+        INPUT_PROJECT_NAME: ${{ inputs.project-name }}
+        INPUT_PROJECT_VERSION: ${{ inputs.project-version }}
+        INPUT_DEPENDENCY_TRACKER_URL: ${{ inputs.dependency-tracker-url }}
+        INPUT_DEPENDENCY_TRACKER_API_KEY: ${{ inputs.dependency-tracker-api-key }}
 
     - name: "✅ Validate input : booleans"
       shell: bash
@@ -156,8 +164,8 @@ runs:
         echo "::debug::Validating boolean inputs..."
         for param in auto-create show-summary; do
           case $param in
-            auto-create) value="${{ inputs.auto-create }}" ;;
-            show-summary) value="${{ inputs.show-summary }}" ;;
+            auto-create) value="${INPUT_AUTO_CREATE}" ;;
+            show-summary) value="${INPUT_SHOW_SUMMARY}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -166,6 +174,9 @@ runs:
         done
 
         echo "✅ Boolean inputs validation completed successfully"
+      env:
+        INPUT_AUTO_CREATE: ${{ inputs.auto-create }}
+        INPUT_SHOW_SUMMARY: ${{ inputs.show-summary }}
 
     - name: "✅ Validate input : numeric parameters"
       shell: bash
@@ -175,9 +186,9 @@ runs:
 
         for param in timeout-seconds retry-attempts retry-delay-seconds; do
           case $param in
-            timeout-seconds) value="${{ inputs.timeout-seconds }}" ;;
-            retry-attempts) value="${{ inputs.retry-attempts }}" ;;
-            retry-delay-seconds) value="${{ inputs.retry-delay-seconds }}" ;;
+            timeout-seconds) value="${INPUT_TIMEOUT_SECONDS}" ;;
+            retry-attempts) value="${INPUT_RETRY_ATTEMPTS}" ;;
+            retry-delay-seconds) value="${INPUT_RETRY_DELAY_SECONDS}" ;;
           esac
           if ! [[ "$value" =~ ^[0-9]+$ ]]; then
             echo "::error::Parameter $param must be a positive integer, got: $value"
@@ -190,6 +201,10 @@ runs:
         fi
 
         echo "✅ Numeric inputs validation completed successfully"
+      env:
+        INPUT_TIMEOUT_SECONDS: ${{ inputs.timeout-seconds }}
+        INPUT_RETRY_ATTEMPTS: ${{ inputs.retry-attempts }}
+        INPUT_RETRY_DELAY_SECONDS: ${{ inputs.retry-delay-seconds }}
 
     - name: "✅ Validate input : file and URL"
       shell: bash
@@ -197,13 +212,13 @@ runs:
         echo "::debug::Validating SBOM file and dependency tracker URL..."
         has_errors=false
 
-        if [ ! -f "${{ steps.normalize-sbom-file.outputs.absolute }}" ]; then
-          echo "::error file=${{ steps.normalize-sbom-file.outputs.normalized }}::SBOM file not found at: ${{ steps.normalize-sbom-file.outputs.normalized }}"
+        if [ ! -f "${STEP_NORMALIZE_SBOM_FILE_ABSOLUTE}" ]; then
+          echo "::error file=${STEP_NORMALIZE_SBOM_FILE_NORMALIZED}::SBOM file not found at: ${STEP_NORMALIZE_SBOM_FILE_NORMALIZED}"
           has_errors=true
         fi
 
-        if [[ ! "${{ inputs.dependency-tracker-url }}" =~ ^https?:// ]]; then
-          echo "::error::Dependency tracker URL must start with http:// or https://. Provided URL: ${{ inputs.dependency-tracker-url }}"
+        if [[ ! "${INPUT_DEPENDENCY_TRACKER_URL}" =~ ^https?:// ]]; then
+          echo "::error::Dependency tracker URL must start with http:// or https://. Provided URL: ${INPUT_DEPENDENCY_TRACKER_URL}"
           has_errors=true
         fi
 
@@ -212,6 +227,10 @@ runs:
         fi
 
         echo "✅ File and URL validation passed"
+      env:
+        STEP_NORMALIZE_SBOM_FILE_ABSOLUTE: ${{ steps.normalize-sbom-file.outputs.absolute }}
+        STEP_NORMALIZE_SBOM_FILE_NORMALIZED: ${{ steps.normalize-sbom-file.outputs.normalized }}
+        INPUT_DEPENDENCY_TRACKER_URL: ${{ inputs.dependency-tracker-url }}
 
     # ================== 🏗️ ==================
 
@@ -223,27 +242,27 @@ runs:
 
         # Optional project tags
         project_tags_params=""
-        if [ -n "${{ inputs.project-tags }}" ]; then
-          project_tags_params="--form projectTags='${{ inputs.project-tags }}'"
-          echo "::debug::Project-Tags: ${{ inputs.project-tags }}"
+        if [ -n "${INPUT_PROJECT_TAGS}" ]; then
+          project_tags_params="--form projectTags='${INPUT_PROJECT_TAGS}'"
+          echo "::debug::Project-Tags: ${INPUT_PROJECT_TAGS}"
         fi
         echo "project-tags-params=$project_tags_params" >> $GITHUB_OUTPUT
 
         # Optional parent project parameters (quoted to survive values containing spaces)
         parent_params=""
-        if [ -n "${{ inputs.parent-project-name }}" ]; then
-          parent_params="$parent_params --form parentName='${{ inputs.parent-project-name }}'"
-          echo "::debug::Parent project: ${{ inputs.parent-project-name }}"
+        if [ -n "${INPUT_PARENT_PROJECT_NAME}" ]; then
+          parent_params="$parent_params --form parentName='${INPUT_PARENT_PROJECT_NAME}'"
+          echo "::debug::Parent project: ${INPUT_PARENT_PROJECT_NAME}"
         fi
-        if [ -n "${{ inputs.parent-project-version }}" ]; then
-          parent_params="$parent_params --form parentVersion='${{ inputs.parent-project-version }}'"
-          echo "::debug::Parent version: ${{ inputs.parent-project-version }}"
+        if [ -n "${INPUT_PARENT_PROJECT_VERSION}" ]; then
+          parent_params="$parent_params --form parentVersion='${INPUT_PARENT_PROJECT_VERSION}'"
+          echo "::debug::Parent version: ${INPUT_PARENT_PROJECT_VERSION}"
         fi
         parent_params="${parent_params# }"
         echo "parent-params=$parent_params" >> $GITHUB_OUTPUT
 
         # File information and validation
-        file_size=$(stat -c%s "${{ steps.normalize-sbom-file.outputs.absolute }}" 2>/dev/null || stat -f%z "${{ steps.normalize-sbom-file.outputs.absolute }}")
+        file_size=$(stat -c%s "${STEP_NORMALIZE_SBOM_FILE_ABSOLUTE}" 2>/dev/null || stat -f%z "${STEP_NORMALIZE_SBOM_FILE_ABSOLUTE}")
         echo "file-size=$file_size" >> $GITHUB_OUTPUT
         echo "::debug::SBOM file size: $file_size bytes"
 
@@ -252,6 +271,11 @@ runs:
         fi
 
         echo "✅ Upload parameters built successfully"
+      env:
+        INPUT_PROJECT_TAGS: ${{ inputs.project-tags }}
+        INPUT_PARENT_PROJECT_NAME: ${{ inputs.parent-project-name }}
+        INPUT_PARENT_PROJECT_VERSION: ${{ inputs.parent-project-version }}
+        STEP_NORMALIZE_SBOM_FILE_ABSOLUTE: ${{ steps.normalize-sbom-file.outputs.absolute }}
 
     # ================== 🚀 ==================
 
@@ -260,21 +284,21 @@ runs:
       shell: bash
       run: |
         echo "🚀 Starting SBOM upload to dependency tracker..."
-        echo "🎯 Target URL: ${{ inputs.dependency-tracker-url }}"
-        echo "📦 Project: ${{ inputs.project-name }} v${{ inputs.project-version }}"
-        echo "📄 SBOM file: ${{ steps.normalize-sbom-file.outputs.normalized }} (${{ steps.build-args.outputs.file-size }} bytes)"
+        echo "🎯 Target URL: ${INPUT_DEPENDENCY_TRACKER_URL}"
+        echo "📦 Project: ${INPUT_PROJECT_NAME} v${INPUT_PROJECT_VERSION}"
+        echo "📄 SBOM file: ${STEP_NORMALIZE_SBOM_FILE_NORMALIZED} (${STEP_BUILD_ARGS_FILE_SIZE} bytes)"
 
-        if [ -n "${{ inputs.parent-project-name }}" ]; then
-          if [ -n "${{ inputs.parent-project-version }}" ]; then
-            echo "👨‍👩‍👧‍👦 Parent project: ${{ inputs.parent-project-name }} v${{ inputs.parent-project-version }}"
+        if [ -n "${INPUT_PARENT_PROJECT_NAME}" ]; then
+          if [ -n "${INPUT_PARENT_PROJECT_VERSION}" ]; then
+            echo "👨‍👩‍👧‍👦 Parent project: ${INPUT_PARENT_PROJECT_NAME} v${INPUT_PARENT_PROJECT_VERSION}"
           else
-            echo "👨‍👩‍👧‍👦 Parent project: ${{ inputs.parent-project-name }}"
+            echo "👨‍👩‍👧‍👦 Parent project: ${INPUT_PARENT_PROJECT_NAME}"
           fi
         fi
 
-        max_attempts=${{ inputs.retry-attempts }}
-        retry_delay=${{ inputs.retry-delay-seconds }}
-        timeout_seconds=${{ inputs.timeout-seconds }}
+        max_attempts=${INPUT_RETRY_ATTEMPTS}
+        retry_delay=${INPUT_RETRY_DELAY_SECONDS}
+        timeout_seconds=${INPUT_TIMEOUT_SECONDS}
 
         echo "⚙️ Max attempts: $max_attempts | Retry delay: ${retry_delay}s | Timeout: ${timeout_seconds}s"
 
@@ -290,11 +314,11 @@ runs:
             "--location"
             "--request" "POST"
             "--header" "Content-Type: multipart/form-data"
-            "--header" "X-API-Key: ${{ inputs.dependency-tracker-api-key }}"
-            "--form" "bom=@${{ steps.normalize-sbom-file.outputs.absolute }}"
-            "--form" "autoCreate=${{ inputs.auto-create }}"
-            "--form" "projectName=${{ inputs.project-name }}"
-            "--form" "projectVersion=${{ inputs.project-version }}"
+            "--header" "X-API-Key: ${INPUT_DEPENDENCY_TRACKER_API_KEY}"
+            "--form" "bom=@${STEP_NORMALIZE_SBOM_FILE_ABSOLUTE}"
+            "--form" "autoCreate=${INPUT_AUTO_CREATE}"
+            "--form" "projectName=${INPUT_PROJECT_NAME}"
+            "--form" "projectVersion=${INPUT_PROJECT_VERSION}"
             "--max-time" "$timeout_seconds"
             "--output" "$response_file"
             "--write-out" "%{http_code}|%{time_total}|%{size_upload}"
@@ -303,16 +327,16 @@ runs:
           )
 
           # Add project tags if provided
-          if [ -n "${{ steps.build-args.outputs.project-tags-params }}" ]; then
-            eval "curl_cmd+=(${{ steps.build-args.outputs.project-tags-params }})"
+          if [ -n "${STEP_BUILD_ARGS_PROJECT_TAGS_PARAMS}" ]; then
+            eval "curl_cmd+=(${STEP_BUILD_ARGS_PROJECT_TAGS_PARAMS})"
           fi
 
           # Add parent project parameters if provided
-          if [ -n "${{ steps.build-args.outputs.parent-params }}" ]; then
-            eval "curl_cmd+=(${{ steps.build-args.outputs.parent-params }})"
+          if [ -n "${STEP_BUILD_ARGS_PARENT_PARAMS}" ]; then
+            eval "curl_cmd+=(${STEP_BUILD_ARGS_PARENT_PARAMS})"
           fi
 
-          curl_cmd+=("${{ inputs.dependency-tracker-url }}")
+          curl_cmd+=("${INPUT_DEPENDENCY_TRACKER_URL}")
 
           echo "🚀 Executing upload command..."
 
@@ -338,7 +362,7 @@ runs:
             echo "✅ Upload successful!"
 
             timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-            base_url="${{ inputs.dependency-tracker-url }}"
+            base_url="${INPUT_DEPENDENCY_TRACKER_URL}"
             project_base_url="${base_url%/api/v1/bom}"
             project_url="${project_base_url}/projects"
 
@@ -376,6 +400,22 @@ runs:
             sleep $retry_delay
           fi
         done
+      env:
+        INPUT_DEPENDENCY_TRACKER_URL: ${{ inputs.dependency-tracker-url }}
+        INPUT_PROJECT_NAME: ${{ inputs.project-name }}
+        INPUT_PROJECT_VERSION: ${{ inputs.project-version }}
+        STEP_NORMALIZE_SBOM_FILE_NORMALIZED: ${{ steps.normalize-sbom-file.outputs.normalized }}
+        STEP_BUILD_ARGS_FILE_SIZE: ${{ steps.build-args.outputs.file-size }}
+        INPUT_PARENT_PROJECT_NAME: ${{ inputs.parent-project-name }}
+        INPUT_PARENT_PROJECT_VERSION: ${{ inputs.parent-project-version }}
+        INPUT_RETRY_ATTEMPTS: ${{ inputs.retry-attempts }}
+        INPUT_RETRY_DELAY_SECONDS: ${{ inputs.retry-delay-seconds }}
+        INPUT_TIMEOUT_SECONDS: ${{ inputs.timeout-seconds }}
+        INPUT_DEPENDENCY_TRACKER_API_KEY: ${{ inputs.dependency-tracker-api-key }}
+        STEP_NORMALIZE_SBOM_FILE_ABSOLUTE: ${{ steps.normalize-sbom-file.outputs.absolute }}
+        INPUT_AUTO_CREATE: ${{ inputs.auto-create }}
+        STEP_BUILD_ARGS_PROJECT_TAGS_PARAMS: ${{ steps.build-args.outputs.project-tags-params }}
+        STEP_BUILD_ARGS_PARENT_PARAMS: ${{ steps.build-args.outputs.parent-params }}
 
     # ================== 🔍 ==================
 
@@ -384,14 +424,18 @@ runs:
       run: |
         echo "🔍 Validating upload result..."
 
-        if [ "${{ steps.upload.outputs.status }}" = "success" ]; then
+        if [ "${STEP_UPLOAD_STATUS}" = "success" ]; then
           echo "✅ SBOM upload validation passed"
-          echo "🔢 HTTP Status: ${{ steps.upload.outputs.http-code }}"
-          echo "⏱️ Timestamp: ${{ steps.upload.outputs.timestamp }}"
+          echo "🔢 HTTP Status: ${STEP_UPLOAD_HTTP_CODE}"
+          echo "⏱️ Timestamp: ${STEP_UPLOAD_TIMESTAMP}"
         else
-          echo "::error::SBOM upload validation failed (status: ${{ steps.upload.outputs.status }})"
+          echo "::error::SBOM upload validation failed (status: ${STEP_UPLOAD_STATUS})"
           exit 1
         fi
+      env:
+        STEP_UPLOAD_STATUS: ${{ steps.upload.outputs.status }}
+        STEP_UPLOAD_HTTP_CODE: ${{ steps.upload.outputs.http-code }}
+        STEP_UPLOAD_TIMESTAMP: ${{ steps.upload.outputs.timestamp }}
 
     # ================== 📊 ==================
 
@@ -399,36 +443,36 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        cat >> $GITHUB_STEP_SUMMARY << EOF
         <details><summary>Expand for details - 📊 SBOM Publish Summary</summary>
 
         ## 🔧 Configuration
         | Parameter | Value |
         |-----------|-------|
-        | 📦 **Project Name** | `${{ inputs.project-name }}` |
-        | 🏷️ **Project Version** | `${{ inputs.project-version }}` |
-        | 📄 **SBOM File** | `${{ steps.normalize-sbom-file.outputs.normalized }}` |
-        | 🎯 **Tracker URL** | `${{ inputs.dependency-tracker-url }}` |
-        | 👨‍👩‍👧‍👦 **Parent Project** | `${{ inputs.parent-project-name || 'None specified' }}` |
-        | 🏷️ **Project Tags** | `${{ inputs.project-tags || 'None specified' }}` |
-        | 🔄 **Auto Create** | `${{ inputs.auto-create }}` |
+        | 📦 **Project Name** | \`${INPUT_PROJECT_NAME}\` |
+        | 🏷️ **Project Version** | \`${INPUT_PROJECT_VERSION}\` |
+        | 📄 **SBOM File** | \`${STEP_NORMALIZE_SBOM_FILE_NORMALIZED}\` |
+        | 🎯 **Tracker URL** | \`${INPUT_DEPENDENCY_TRACKER_URL}\` |
+        | 👨‍👩‍👧‍👦 **Parent Project** | \`${INPUT_PARENT_PROJECT_NAME}\` |
+        | 🏷️ **Project Tags** | \`${INPUT_PROJECT_TAGS}\` |
+        | 🔄 **Auto Create** | \`${INPUT_AUTO_CREATE}\` |
 
         ## 📤 Upload Results
         | Metric | Value |
         |--------|-------|
-        | ✅ **Status** | `${{ steps.upload.outputs.status || 'Not executed' }}` |
-        | 🔢 **HTTP Code** | `${{ steps.upload.outputs.http-code || 'N/A' }}` |
-        | 📊 **File Size** | `${{ steps.build-args.outputs.file-size || 'Unknown' }} bytes` |
-        | ⏱️ **Duration** | `${{ steps.upload.outputs.duration || 'N/A' }}s` |
-        | 🕐 **Completion** | `${{ steps.upload.outputs.timestamp || 'Not completed' }}` |
-        | 🔗 **Project URL** | `${{ steps.upload.outputs.project-url || 'Not available' }}` |
+        | ✅ **Status** | \`${STEP_UPLOAD_STATUS}\` |
+        | 🔢 **HTTP Code** | \`${STEP_UPLOAD_HTTP_CODE}\` |
+        | 📊 **File Size** | \`${STEP_BUILD_ARGS_FILE_SIZE} bytes\` |
+        | ⏱️ **Duration** | \`${STEP_UPLOAD_DURATION}s\` |
+        | 🕐 **Completion** | \`${STEP_UPLOAD_TIMESTAMP}\` |
+        | 🔗 **Project URL** | \`${STEP_UPLOAD_PROJECT_URL}\` |
 
         ## ⚙️ Upload Configuration
         | Setting | Value |
         |---------|-------|
-        | ⏱️ **Timeout** | `${{ inputs.timeout-seconds }}s` |
-        | 🔁 **Max Attempts** | `${{ inputs.retry-attempts }}` |
-        | ⏳ **Retry Delay** | `${{ inputs.retry-delay-seconds }}s` |
+        | ⏱️ **Timeout** | \`${INPUT_TIMEOUT_SECONDS}s\` |
+        | 🔁 **Max Attempts** | \`${INPUT_RETRY_ATTEMPTS}\` |
+        | ⏳ **Retry Delay** | \`${INPUT_RETRY_DELAY_SECONDS}s\` |
 
         ---
 
@@ -436,6 +480,23 @@ runs:
 
         </details>
         EOF
+      env:
+        INPUT_PROJECT_NAME: ${{ inputs.project-name }}
+        INPUT_PROJECT_VERSION: ${{ inputs.project-version }}
+        STEP_NORMALIZE_SBOM_FILE_NORMALIZED: ${{ steps.normalize-sbom-file.outputs.normalized }}
+        INPUT_DEPENDENCY_TRACKER_URL: ${{ inputs.dependency-tracker-url }}
+        INPUT_PARENT_PROJECT_NAME: ${{ inputs.parent-project-name || 'None specified' }}
+        INPUT_PROJECT_TAGS: ${{ inputs.project-tags || 'None specified' }}
+        INPUT_AUTO_CREATE: ${{ inputs.auto-create }}
+        STEP_UPLOAD_STATUS: ${{ steps.upload.outputs.status || 'Not executed' }}
+        STEP_UPLOAD_HTTP_CODE: ${{ steps.upload.outputs.http-code || 'N/A' }}
+        STEP_BUILD_ARGS_FILE_SIZE: ${{ steps.build-args.outputs.file-size || 'Unknown' }}
+        STEP_UPLOAD_DURATION: ${{ steps.upload.outputs.duration || 'N/A' }}
+        STEP_UPLOAD_TIMESTAMP: ${{ steps.upload.outputs.timestamp || 'Not completed' }}
+        STEP_UPLOAD_PROJECT_URL: ${{ steps.upload.outputs.project-url || 'Not available' }}
+        INPUT_TIMEOUT_SECONDS: ${{ inputs.timeout-seconds }}
+        INPUT_RETRY_ATTEMPTS: ${{ inputs.retry-attempts }}
+        INPUT_RETRY_DELAY_SECONDS: ${{ inputs.retry-delay-seconds }}
 
 branding:
   icon: "upload-cloud"

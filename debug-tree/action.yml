@@ -35,30 +35,34 @@ runs:
       run: |
         for param in show-hidden; do
           case $param in
-            show-hidden) value="${{ inputs.show-hidden }}" ;;
+            show-hidden) value="${INPUT_SHOW_HIDDEN}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
             exit 1
           fi
         done
+      env:
+        INPUT_SHOW_HIDDEN: ${{ inputs.show-hidden }}
 
     - name: "✅ Validate input : depth"
       shell: bash
       run: |
-        if ! [[ "${{ inputs.depth }}" =~ ^[0-9]+$ ]]; then
-          echo "::error::Depth must be a non-negative integer, got: ${{ inputs.depth }}"
+        if ! [[ "${INPUT_DEPTH}" =~ ^[0-9]+$ ]]; then
+          echo "::error::Depth must be a non-negative integer, got: ${INPUT_DEPTH}"
           exit 1
         fi
+      env:
+        INPUT_DEPTH: ${{ inputs.depth }}
 
     # ================== 🚀 ==================
 
     - name: "🌳 Show directory tree"
       shell: bash
       run: |
-        path="${{ inputs.path }}"
-        depth="${{ inputs.depth }}"
-        show_hidden="${{ inputs.show-hidden }}"
+        path="${INPUT_PATH}"
+        depth="${INPUT_DEPTH}"
+        show_hidden="${INPUT_SHOW_HIDDEN}"
 
         echo "� Directory tree for: $path"
         echo ""
@@ -90,6 +94,10 @@ runs:
 
           find $find_args | sort
         fi
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_DEPTH: ${{ inputs.depth }}
+        INPUT_SHOW_HIDDEN: ${{ inputs.show-hidden }}
 
 branding:
   icon: "folder"

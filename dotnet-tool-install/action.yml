@@ -159,14 +159,16 @@ runs:
     - name: "✅ Validate input : tool-name"
       shell: bash
       run: |
-        echo "::debug::Validating tool name input: ${{ inputs.tool-name }}"
+        echo "::debug::Validating tool name input: ${INPUT_TOOL_NAME}"
 
-        if [ -z "${{ inputs.tool-name }}" ]; then
+        if [ -z "${INPUT_TOOL_NAME}" ]; then
           echo "::error::Tool name is required"
           exit 1
         fi
 
         echo "✅ Tool name validation completed successfully"
+      env:
+        INPUT_TOOL_NAME: ${{ inputs.tool-name }}
 
     - name: "✅ Validate input : booleans"
       shell: bash
@@ -174,14 +176,14 @@ runs:
         echo "::debug::Validating boolean inputs..."
         for param in global prerelease disable-parallel ignore-failed-sources no-http-cache create-manifest-if-needed allow-downgrade allow-roll-forward; do
           case $param in
-            global) value="${{ inputs.global }}" ;;
-            prerelease) value="${{ inputs.prerelease }}" ;;
-            disable-parallel) value="${{ inputs.disable-parallel }}" ;;
-            ignore-failed-sources) value="${{ inputs.ignore-failed-sources }}" ;;
-            no-http-cache) value="${{ inputs.no-http-cache }}" ;;
-            create-manifest-if-needed) value="${{ inputs.create-manifest-if-needed }}" ;;
-            allow-downgrade) value="${{ inputs.allow-downgrade }}" ;;
-            allow-roll-forward) value="${{ inputs.allow-roll-forward }}" ;;
+            global) value="${INPUT_GLOBAL}" ;;
+            prerelease) value="${INPUT_PRERELEASE}" ;;
+            disable-parallel) value="${INPUT_DISABLE_PARALLEL}" ;;
+            ignore-failed-sources) value="${INPUT_IGNORE_FAILED_SOURCES}" ;;
+            no-http-cache) value="${INPUT_NO_HTTP_CACHE}" ;;
+            create-manifest-if-needed) value="${INPUT_CREATE_MANIFEST_IF_NEEDED}" ;;
+            allow-downgrade) value="${INPUT_ALLOW_DOWNGRADE}" ;;
+            allow-roll-forward) value="${INPUT_ALLOW_ROLL_FORWARD}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -190,73 +192,93 @@ runs:
         done
 
         echo "✅ Boolean inputs validation completed successfully"
+      env:
+        INPUT_GLOBAL: ${{ inputs.global }}
+        INPUT_PRERELEASE: ${{ inputs.prerelease }}
+        INPUT_DISABLE_PARALLEL: ${{ inputs.disable-parallel }}
+        INPUT_IGNORE_FAILED_SOURCES: ${{ inputs.ignore-failed-sources }}
+        INPUT_NO_HTTP_CACHE: ${{ inputs.no-http-cache }}
+        INPUT_CREATE_MANIFEST_IF_NEEDED: ${{ inputs.create-manifest-if-needed }}
+        INPUT_ALLOW_DOWNGRADE: ${{ inputs.allow-downgrade }}
+        INPUT_ALLOW_ROLL_FORWARD: ${{ inputs.allow-roll-forward }}
 
     - name: "✅ Validate input : version"
       if: ${{ inputs.version != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating tool version input: ${{ inputs.version }}"
+        echo "::debug::Validating tool version input: ${INPUT_VERSION}"
 
-        if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?(-[A-Za-z0-9.-]+)?$ ]]; then
+        if ! [[ "${INPUT_VERSION}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?(-[A-Za-z0-9.-]+)?$ ]]; then
           echo "::error::Tool version must be a valid semantic version (e.g., '1.2.3' or '1.2.3-beta')"
           exit 1
         fi
 
         echo "✅ Tool version validation completed successfully"
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
 
     - name: "✅ Validate input : configfile"
       if: ${{ inputs.configfile != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating configfile input: ${{ steps.normalize-configfile.outputs.normalized }}"
+        echo "::debug::Validating configfile input: ${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}"
 
-        if [ "${{ steps.normalize-configfile.outputs.exists }}" != "true" ]; then
-          echo "::error file=${{ steps.normalize-configfile.outputs.normalized }}::Configuration file not found: ${{ steps.normalize-configfile.outputs.normalized }}"
+        if [ "${STEP_NORMALIZE_CONFIGFILE_EXISTS}" != "true" ]; then
+          echo "::error file=${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}::Configuration file not found: ${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Configfile validation completed successfully"
+      env:
+        STEP_NORMALIZE_CONFIGFILE_NORMALIZED: ${{ steps.normalize-configfile.outputs.normalized }}
+        STEP_NORMALIZE_CONFIGFILE_EXISTS: ${{ steps.normalize-configfile.outputs.exists }}
 
     - name: "✅ Validate input : tool-path"
       if: ${{ inputs.tool-path != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating tool-path input: ${{ steps.normalize-tool-path.outputs.normalized }}"
+        echo "::debug::Validating tool-path input: ${STEP_NORMALIZE_TOOL_PATH_NORMALIZED}"
 
         # Check if parent directory exists (tool-path directory will be created if needed)
-        PARENT_DIR=$(dirname "${{ steps.normalize-tool-path.outputs.normalized }}")
+        PARENT_DIR=$(dirname "${STEP_NORMALIZE_TOOL_PATH_NORMALIZED}")
         if [ ! -d "$PARENT_DIR" ]; then
           echo "::error::Parent directory for tool path does not exist: $PARENT_DIR"
           exit 1
         fi
 
         echo "✅ Tool path validation completed successfully"
+      env:
+        STEP_NORMALIZE_TOOL_PATH_NORMALIZED: ${{ steps.normalize-tool-path.outputs.normalized }}
 
     - name: "✅ Validate input : add-source"
       if: ${{ inputs.add-source != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating add-source input: ${{ inputs.add-source }}"
+        echo "::debug::Validating add-source input: ${INPUT_ADD_SOURCE}"
 
-        if [[ ! "${{ inputs.add-source }}" =~ ^https?:// ]]; then
-          echo "::error::Additional source must be a valid URL starting with http:// or https://: ${{ inputs.add-source }}"
+        if [[ ! "${INPUT_ADD_SOURCE}" =~ ^https?:// ]]; then
+          echo "::error::Additional source must be a valid URL starting with http:// or https://: ${INPUT_ADD_SOURCE}"
           exit 1
         fi
 
         echo "✅ Add-source validation completed successfully"
+      env:
+        INPUT_ADD_SOURCE: ${{ inputs.add-source }}
 
     - name: "✅ Validate input : source"
       if: ${{ inputs.source != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating source input: ${{ inputs.source }}"
+        echo "::debug::Validating source input: ${INPUT_SOURCE}"
 
-        if [[ ! "${{ inputs.source }}" =~ ^https?:// ]]; then
-          echo "::error::Source must be a valid URL starting with http:// or https://: ${{ inputs.source }}"
+        if [[ ! "${INPUT_SOURCE}" =~ ^https?:// ]]; then
+          echo "::error::Source must be a valid URL starting with http:// or https://: ${INPUT_SOURCE}"
           exit 1
         fi
 
         echo "✅ Source validation completed successfully"
+      env:
+        INPUT_SOURCE: ${{ inputs.source }}
 
     # ================== 🏗️ ==================
 
@@ -267,26 +289,26 @@ runs:
         echo "::debug::Building argument list..."
 
         # Start with base arguments
-        ARGUMENTS="install '${{ inputs.tool-name }}'"
+        ARGUMENTS="install '${INPUT_TOOL_NAME}'"
 
         # Boolean flags
         for param in prerelease disable-parallel ignore-failed-sources no-http-cache create-manifest-if-needed allow-downgrade allow-roll-forward; do
           case $param in
-            prerelease) value="${{ inputs.prerelease }}" ;;
-            disable-parallel) value="${{ inputs.disable-parallel }}" ;;
-            ignore-failed-sources) value="${{ inputs.ignore-failed-sources }}" ;;
-            no-http-cache) value="${{ inputs.no-http-cache }}" ;;
-            create-manifest-if-needed) value="${{ inputs.create-manifest-if-needed }}" ;;
-            allow-downgrade) value="${{ inputs.allow-downgrade }}" ;;
-            allow-roll-forward) value="${{ inputs.allow-roll-forward }}" ;;
+            prerelease) value="${INPUT_PRERELEASE}" ;;
+            disable-parallel) value="${INPUT_DISABLE_PARALLEL}" ;;
+            ignore-failed-sources) value="${INPUT_IGNORE_FAILED_SOURCES}" ;;
+            no-http-cache) value="${INPUT_NO_HTTP_CACHE}" ;;
+            create-manifest-if-needed) value="${INPUT_CREATE_MANIFEST_IF_NEEDED}" ;;
+            allow-downgrade) value="${INPUT_ALLOW_DOWNGRADE}" ;;
+            allow-roll-forward) value="${INPUT_ALLOW_ROLL_FORWARD}" ;;
           esac
           if [ "$value" = "true" ]; then
             ARGUMENTS="$ARGUMENTS --${param}"
           fi
         done
 
-        if [ -n "${{ inputs.global }}" ]; then
-          if [ "${{ inputs.global }}" = "true" ]; then
+        if [ -n "${INPUT_GLOBAL}" ]; then
+          if [ "${INPUT_GLOBAL}" = "true" ]; then
             ARGUMENTS="$ARGUMENTS --global"
           else
             ARGUMENTS="$ARGUMENTS --local"
@@ -296,12 +318,12 @@ runs:
         # Key-value options with normalized paths
         for param in version tool-path add-source source configfile tool-manifest; do
           case $param in
-            version) value="${{ inputs.version }}" ;;
-            tool-path) value="${{ steps.normalize-tool-path.outputs.normalized }}" ;;
-            add-source) value="${{ inputs.add-source }}" ;;
-            source) value="${{ inputs.source }}" ;;
-            configfile) value="${{ steps.normalize-configfile.outputs.normalized }}" ;;
-            tool-manifest) value="${{ steps.normalize-tool-manifest.outputs.normalized }}" ;;
+            version) value="${INPUT_VERSION}" ;;
+            tool-path) value="${STEP_NORMALIZE_TOOL_PATH_NORMALIZED}" ;;
+            add-source) value="${INPUT_ADD_SOURCE}" ;;
+            source) value="${INPUT_SOURCE}" ;;
+            configfile) value="${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}" ;;
+            tool-manifest) value="${STEP_NORMALIZE_TOOL_MANIFEST_NORMALIZED}" ;;
           esac
           if [ -n "$value" ]; then
             ARGUMENTS="$ARGUMENTS --$param '$value'"
@@ -309,9 +331,9 @@ runs:
         done
 
         # Add normalized arguments
-        if [ -n "${{ steps.normalize-arguments.outputs.normalized }}" ]; then
-          NORMALIZED_ARGS="${{ steps.normalize-arguments.outputs.normalized }}"
-          echo "::debug::Original arguments: ${{ inputs.arguments }}"
+        if [ -n "${STEP_NORMALIZE_ARGUMENTS_NORMALIZED}" ]; then
+          NORMALIZED_ARGS="${STEP_NORMALIZE_ARGUMENTS_NORMALIZED}"
+          echo "::debug::Original arguments: ${INPUT_ARGUMENTS}"
           echo "::debug::Normalized arguments: $NORMALIZED_ARGS"
           ARGUMENTS="$ARGUMENTS $NORMALIZED_ARGS"
         fi
@@ -321,6 +343,24 @@ runs:
 
         echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
         echo "✅ Argument list built successfully: $ARGUMENTS"
+      env:
+        INPUT_TOOL_NAME: ${{ inputs.tool-name }}
+        INPUT_PRERELEASE: ${{ inputs.prerelease }}
+        INPUT_DISABLE_PARALLEL: ${{ inputs.disable-parallel }}
+        INPUT_IGNORE_FAILED_SOURCES: ${{ inputs.ignore-failed-sources }}
+        INPUT_NO_HTTP_CACHE: ${{ inputs.no-http-cache }}
+        INPUT_CREATE_MANIFEST_IF_NEEDED: ${{ inputs.create-manifest-if-needed }}
+        INPUT_ALLOW_DOWNGRADE: ${{ inputs.allow-downgrade }}
+        INPUT_ALLOW_ROLL_FORWARD: ${{ inputs.allow-roll-forward }}
+        INPUT_GLOBAL: ${{ inputs.global }}
+        INPUT_VERSION: ${{ inputs.version }}
+        STEP_NORMALIZE_TOOL_PATH_NORMALIZED: ${{ steps.normalize-tool-path.outputs.normalized }}
+        INPUT_ADD_SOURCE: ${{ inputs.add-source }}
+        INPUT_SOURCE: ${{ inputs.source }}
+        STEP_NORMALIZE_CONFIGFILE_NORMALIZED: ${{ steps.normalize-configfile.outputs.normalized }}
+        STEP_NORMALIZE_TOOL_MANIFEST_NORMALIZED: ${{ steps.normalize-tool-manifest.outputs.normalized }}
+        STEP_NORMALIZE_ARGUMENTS_NORMALIZED: ${{ steps.normalize-arguments.outputs.normalized }}
+        INPUT_ARGUMENTS: ${{ inputs.arguments }}
 
     # ================== 🚀 ==================
 
@@ -343,29 +383,32 @@ runs:
       shell: bash
       working-directory: ${{ steps.normalize-working-directory.outputs.normalized }}
       run: |
-        echo "::debug::Verifying installation of tool '${{ inputs.tool-name }}'..."
+        echo "::debug::Verifying installation of tool '${INPUT_TOOL_NAME}'..."
 
-        if [ "${{ inputs.global }}" == "true" ]; then
-          if dotnet tool list -g | grep -iq "^${{ inputs.tool-name }} "; then
-            echo "✅ Tool '${{ inputs.tool-name }}' is now installed globally."
+        if [ "${INPUT_GLOBAL}" == "true" ]; then
+          if dotnet tool list -g | grep -iq "^${INPUT_TOOL_NAME} "; then
+            echo "✅ Tool '${INPUT_TOOL_NAME}' is now installed globally."
             echo "has-been-installed=true" >> $GITHUB_OUTPUT
           else
-            echo "::error::Tool '${{ inputs.tool-name }}' installation failed or tool not found globally."
+            echo "::error::Tool '${INPUT_TOOL_NAME}' installation failed or tool not found globally."
             echo "has-been-installed=false" >> $GITHUB_OUTPUT
             exit 1
           fi
         else
-          if dotnet tool list | grep -iq "^${{ inputs.tool-name }} "; then
-            echo "✅ Tool '${{ inputs.tool-name }}' is now installed locally."
+          if dotnet tool list | grep -iq "^${INPUT_TOOL_NAME} "; then
+            echo "✅ Tool '${INPUT_TOOL_NAME}' is now installed locally."
             echo "has-been-installed=true" >> $GITHUB_OUTPUT
           else
-            echo "::error::Tool '${{ inputs.tool-name }}' installation failed or tool not found locally."
+            echo "::error::Tool '${INPUT_TOOL_NAME}' installation failed or tool not found locally."
             echo "has-been-installed=false" >> $GITHUB_OUTPUT
             exit 1
           fi
         fi
 
-        echo "✅ Tool '${{ inputs.tool-name }}' installation verification completed"
+        echo "✅ Tool '${INPUT_TOOL_NAME}' installation verification completed"
+      env:
+        INPUT_TOOL_NAME: ${{ inputs.tool-name }}
+        INPUT_GLOBAL: ${{ inputs.global }}
 
     # ================== 📊 ==================
 
@@ -373,50 +416,78 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>🔧 .NET Tool Install : ${{ inputs.tool-name }} ${{ inputs.version || 'latest' }}</summary>
+        cat >> $GITHUB_STEP_SUMMARY << EOF
+        <details><summary>🔧 .NET Tool Install : ${INPUT_TOOL_NAME} ${INPUT_VERSION}</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | � Working Directory | `${{ steps.normalize-working-directory.outputs.normalized }}` |
-        | ⚙️ Framework | `${{ inputs.framework || 'none' }}` |
-        | 🔊 Verbosity | `${{ inputs.verbosity || 'auto' }}` |
-        | 🏗️ Architecture | `${{ inputs.arch || 'none' }}` |
-        | 🔧 Arguments | `${{ steps.normalize-arguments.outputs.normalized || 'none' }}` |
-        | �🔧 Tool Name | `${{ inputs.tool-name }}` |
-        | 📦 Tool Version | `${{ inputs.version || 'latest' }}` |
-        | 🌍 Global Install | `${{ inputs.global }}` |
-        | 🧪 Include Prerelease | `${{ inputs.prerelease }}` |
-        | 🛤️ Tool Path | `${{ steps.normalize-tool-path.outputs.normalized || 'default' }}` |
-        | 🔗 Additional Source | `${{ inputs.add-source || 'none' }}` |
-        | 🔄 Replace Sources | `${{ inputs.source || 'none' }}` |
-        | ⚙️ Config File | `${{ steps.normalize-configfile.outputs.normalized || 'default' }}` |
-        | 📄 Tool Manifest | `${{ steps.normalize-tool-manifest.outputs.normalized || 'default' }}` |
-        | 📊 Allow Downgrade | `${{ inputs.allow-downgrade }}` |
-        | ➡️ Allow Roll Forward | `${{ inputs.allow-roll-forward }}` |
-        | 🛠️ Disable Parallel Restore | `${{ inputs.disable-parallel }}` |
-        | ⚠️ Ignore Failed Sources | `${{ inputs.ignore-failed-sources }}` |
-        | 🚫 No HTTP Cache | `${{ inputs.no-http-cache }}` |
-        | 🆕 Create Manifest If Needed | `${{ inputs.create-manifest-if-needed }}` |
+        | � Working Directory | \`${STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED}\` |
+        | ⚙️ Framework | \`${INPUT_FRAMEWORK}\` |
+        | 🔊 Verbosity | \`${INPUT_VERBOSITY}\` |
+        | 🏗️ Architecture | \`${INPUT_ARCH}\` |
+        | 🔧 Arguments | \`${STEP_NORMALIZE_ARGUMENTS_NORMALIZED}\` |
+        | �🔧 Tool Name | \`${INPUT_TOOL_NAME}\` |
+        | 📦 Tool Version | \`${INPUT_VERSION}\` |
+        | 🌍 Global Install | \`${INPUT_GLOBAL}\` |
+        | 🧪 Include Prerelease | \`${INPUT_PRERELEASE}\` |
+        | 🛤️ Tool Path | \`${STEP_NORMALIZE_TOOL_PATH_NORMALIZED}\` |
+        | 🔗 Additional Source | \`${INPUT_ADD_SOURCE}\` |
+        | 🔄 Replace Sources | \`${INPUT_SOURCE}\` |
+        | ⚙️ Config File | \`${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}\` |
+        | 📄 Tool Manifest | \`${STEP_NORMALIZE_TOOL_MANIFEST_NORMALIZED}\` |
+        | 📊 Allow Downgrade | \`${INPUT_ALLOW_DOWNGRADE}\` |
+        | ➡️ Allow Roll Forward | \`${INPUT_ALLOW_ROLL_FORWARD}\` |
+        | 🛠️ Disable Parallel Restore | \`${INPUT_DISABLE_PARALLEL}\` |
+        | ⚠️ Ignore Failed Sources | \`${INPUT_IGNORE_FAILED_SOURCES}\` |
+        | 🚫 No HTTP Cache | \`${INPUT_NO_HTTP_CACHE}\` |
+        | 🆕 Create Manifest If Needed | \`${INPUT_CREATE_MANIFEST_IF_NEEDED}\` |
 
         ## 📤 Execution Results
         | Metric | Value |
         |--------|-------|
-        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
-        | 📊 Status | `${{ steps.run-dotnet.outcome }}` |
-        | 🚀 Executed Command | `${{ steps.run-dotnet.outputs.executed-command }}` |
-        | 🔧 Tool Installed | `${{ steps.check-installed.outputs.has-been-installed }}` |
+        | ✅ Exit Code | \`${STEP_RUN_DOTNET_EXIT_CODE}\` |
+        | 📊 Status | \`${STEP_RUN_DOTNET_OUTCOME}\` |
+        | 🚀 Executed Command | \`${STEP_RUN_DOTNET_EXECUTED_COMMAND}\` |
+        | 🔧 Tool Installed | \`${STEP_CHECK_INSTALLED_HAS_BEEN_INSTALLED}\` |
 
         ## ⚙️ Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | � Tool Installation | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | � Installation Verification | `${{ steps.check-installed.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 🏗️ Argument Building | \`${STEP_BUILD_ARGS_OUTCOME_LABEL}\` |
+        | � Tool Installation | \`${STEP_RUN_DOTNET_OUTCOME_LABEL}\` |
+        | � Installation Verification | \`${STEP_CHECK_INSTALLED_OUTCOME_LABEL}\` |
         </details>
         EOF
+      env:
+        INPUT_TOOL_NAME: ${{ inputs.tool-name }}
+        INPUT_VERSION: ${{ inputs.version || 'latest' }}
+        STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED: ${{ steps.normalize-working-directory.outputs.normalized }}
+        INPUT_FRAMEWORK: ${{ inputs.framework || 'none' }}
+        INPUT_VERBOSITY: ${{ inputs.verbosity || 'auto' }}
+        INPUT_ARCH: ${{ inputs.arch || 'none' }}
+        STEP_NORMALIZE_ARGUMENTS_NORMALIZED: ${{ steps.normalize-arguments.outputs.normalized || 'none' }}
+        INPUT_GLOBAL: ${{ inputs.global }}
+        INPUT_PRERELEASE: ${{ inputs.prerelease }}
+        STEP_NORMALIZE_TOOL_PATH_NORMALIZED: ${{ steps.normalize-tool-path.outputs.normalized || 'default' }}
+        INPUT_ADD_SOURCE: ${{ inputs.add-source || 'none' }}
+        INPUT_SOURCE: ${{ inputs.source || 'none' }}
+        STEP_NORMALIZE_CONFIGFILE_NORMALIZED: ${{ steps.normalize-configfile.outputs.normalized || 'default' }}
+        STEP_NORMALIZE_TOOL_MANIFEST_NORMALIZED: ${{ steps.normalize-tool-manifest.outputs.normalized || 'default' }}
+        INPUT_ALLOW_DOWNGRADE: ${{ inputs.allow-downgrade }}
+        INPUT_ALLOW_ROLL_FORWARD: ${{ inputs.allow-roll-forward }}
+        INPUT_DISABLE_PARALLEL: ${{ inputs.disable-parallel }}
+        INPUT_IGNORE_FAILED_SOURCES: ${{ inputs.ignore-failed-sources }}
+        INPUT_NO_HTTP_CACHE: ${{ inputs.no-http-cache }}
+        INPUT_CREATE_MANIFEST_IF_NEEDED: ${{ inputs.create-manifest-if-needed }}
+        STEP_RUN_DOTNET_EXIT_CODE: ${{ steps.run-dotnet.outputs.exit-code }}
+        STEP_RUN_DOTNET_OUTCOME: ${{ steps.run-dotnet.outcome }}
+        STEP_RUN_DOTNET_EXECUTED_COMMAND: ${{ steps.run-dotnet.outputs.executed-command }}
+        STEP_CHECK_INSTALLED_HAS_BEEN_INSTALLED: ${{ steps.check-installed.outputs.has-been-installed }}
+        STEP_BUILD_ARGS_OUTCOME_LABEL: ${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_RUN_DOTNET_OUTCOME_LABEL: ${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_CHECK_INSTALLED_OUTCOME_LABEL: ${{ steps.check-installed.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
 
 branding:
   icon: "settings"

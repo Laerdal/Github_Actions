@@ -118,12 +118,14 @@ runs:
         echo "::debug::Validating required parameters..."
 
         # Validate required message parameter
-        if [ -z "${{ inputs.message }}" ]; then
+        if [ -z "${INPUT_MESSAGE}" ]; then
           echo "::error::Message parameter is required"
           exit 1
         fi
 
         echo "✅ Required parameters validation completed successfully"
+      env:
+        INPUT_MESSAGE: ${{ inputs.message }}
 
     - name: "✅ Validate input : booleans"
       shell: bash
@@ -131,7 +133,7 @@ runs:
         echo "::debug::Validating boolean inputs..."
         for param in show-summary; do
           case $param in
-            show-summary) value="${{ inputs.show-summary }}" ;;
+            show-summary) value="${INPUT_SHOW_SUMMARY}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -140,30 +142,36 @@ runs:
         done
 
         echo "✅ Boolean inputs validation completed successfully"
+      env:
+        INPUT_SHOW_SUMMARY: ${{ inputs.show-summary }}
 
     - name: "✅ Validate input : style"
       shell: bash
       run: |
-        echo "::debug::Validating style input: ${{ inputs.style }}"
+        echo "::debug::Validating style input: ${INPUT_STYLE}"
 
-        case "${{ inputs.style }}" in
+        case "${INPUT_STYLE}" in
           flat|flat-square|plastic|for-the-badge|social) ;;
           *) echo "::error::Invalid style. Must be one of: flat, flat-square, plastic, for-the-badge, social"; exit 1 ;;
         esac
 
         echo "✅ Style validation completed successfully"
+      env:
+        INPUT_STYLE: ${{ inputs.style }}
 
     - name: "✅ Validate input : output-format"
       shell: bash
       run: |
-        echo "::debug::Validating output-format input: ${{ inputs.output-format }}"
+        echo "::debug::Validating output-format input: ${INPUT_OUTPUT_FORMAT}"
 
-        case "${{ inputs.output-format }}" in
+        case "${INPUT_OUTPUT_FORMAT}" in
           url|markdown|html|svg) ;;
           *) echo "::error::Invalid output format. Must be one of: url, markdown, html, svg"; exit 1 ;;
         esac
 
         echo "✅ Output format validation completed successfully"
+      env:
+        INPUT_OUTPUT_FORMAT: ${{ inputs.output-format }}
 
     - name: "✅ Validate input : colors"
       if: ${{ inputs.color != '' || inputs.label-color != '' || inputs.logo-color != '' }}
@@ -196,81 +204,92 @@ runs:
           fi
         }
 
-        validate_color "${{ inputs.color }}" "color"
-        validate_color "${{ inputs.label-color }}" "label-color"
-        validate_color "${{ inputs.logo-color }}" "logo-color"
+        validate_color "${INPUT_COLOR}" "color"
+        validate_color "${INPUT_LABEL_COLOR}" "label-color"
+        validate_color "${INPUT_LOGO_COLOR}" "logo-color"
 
         echo "✅ Colors validation completed successfully"
+      env:
+        INPUT_COLOR: ${{ inputs.color }}
+        INPUT_LABEL_COLOR: ${{ inputs.label-color }}
+        INPUT_LOGO_COLOR: ${{ inputs.logo-color }}
 
     - name: "✅ Validate input : logo"
       if: ${{ inputs.logo != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating logo input: ${{ inputs.logo }}"
+        echo "::debug::Validating logo input: ${INPUT_LOGO}"
 
         # Logo should be a valid simple-icons slug (lowercase, hyphens allowed)
-        if [[ ! "${{ inputs.logo }}" =~ ^[a-z0-9-]+$ ]]; then
-          echo "::error::Invalid logo format. Use simple-icons slug format (lowercase, hyphens allowed): ${{ inputs.logo }}"
+        if [[ ! "${INPUT_LOGO}" =~ ^[a-z0-9-]+$ ]]; then
+          echo "::error::Invalid logo format. Use simple-icons slug format (lowercase, hyphens allowed): ${INPUT_LOGO}"
           exit 1
         fi
 
         echo "✅ Logo validation completed successfully"
+      env:
+        INPUT_LOGO: ${{ inputs.logo }}
 
     - name: "✅ Validate input : cache-seconds"
       if: ${{ inputs.cache-seconds != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating cache-seconds input: ${{ inputs.cache-seconds }}"
+        echo "::debug::Validating cache-seconds input: ${INPUT_CACHE_SECONDS}"
 
-        if ! [[ "${{ inputs.cache-seconds }}" =~ ^[0-9]+$ ]]; then
-          echo "::error::cache-seconds must be a numeric value, got: ${{ inputs.cache-seconds }}"
+        if ! [[ "${INPUT_CACHE_SECONDS}" =~ ^[0-9]+$ ]]; then
+          echo "::error::cache-seconds must be a numeric value, got: ${INPUT_CACHE_SECONDS}"
           exit 1
         fi
 
         # Validate reasonable range (0 to 1 year in seconds)
-        if [ "${{ inputs.cache-seconds }}" -gt 31536000 ]; then
-          echo "::warning::cache-seconds value is very high (>1 year): ${{ inputs.cache-seconds }}"
+        if [ "${INPUT_CACHE_SECONDS}" -gt 31536000 ]; then
+          echo "::warning::cache-seconds value is very high (>1 year): ${INPUT_CACHE_SECONDS}"
         fi
 
         echo "✅ Cache seconds validation completed successfully"
+      env:
+        INPUT_CACHE_SECONDS: ${{ inputs.cache-seconds }}
 
     - name: "✅ Validate input : output-file"
       if: ${{ inputs.output-file != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating output-file input: ${{ steps.normalize-output-file.outputs.normalized }}"
+        echo "::debug::Validating output-file input: ${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}"
 
         # Validate file extension matches output format
-        case "${{ inputs.output-format }}" in
+        case "${INPUT_OUTPUT_FORMAT}" in
           url)
-            if [[ ! "${{ steps.normalize-output-file.outputs.normalized }}" =~ \.(txt|url)$ ]]; then
+            if [[ ! "${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}" =~ \.(txt|url)$ ]]; then
               echo "::warning::URL format typically uses .txt or .url extension"
             fi
             ;;
           markdown)
-            if [[ ! "${{ steps.normalize-output-file.outputs.normalized }}" =~ \.(md|markdown)$ ]]; then
+            if [[ ! "${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}" =~ \.(md|markdown)$ ]]; then
               echo "::warning::Markdown format typically uses .md or .markdown extension"
             fi
             ;;
           html)
-            if [[ ! "${{ steps.normalize-output-file.outputs.normalized }}" =~ \.html?$ ]]; then
+            if [[ ! "${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}" =~ \.html?$ ]]; then
               echo "::warning::HTML format typically uses .html or .htm extension"
             fi
             ;;
           svg)
-            if [[ ! "${{ steps.normalize-output-file.outputs.normalized }}" =~ \.svg$ ]]; then
+            if [[ ! "${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}" =~ \.svg$ ]]; then
               echo "::warning::SVG format should use .svg extension"
             fi
             ;;
         esac
 
         # Validate output directory exists or can be created
-        output_dir=$(dirname "${{ steps.normalize-output-file.outputs.normalized }}")
+        output_dir=$(dirname "${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}")
         if [ "$output_dir" != "." ] && [ ! -d "$output_dir" ]; then
           echo "::debug::Output directory will be created: $output_dir"
         fi
 
         echo "✅ Output file validation completed successfully"
+      env:
+        STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED: ${{ steps.normalize-output-file.outputs.normalized }}
+        INPUT_OUTPUT_FORMAT: ${{ inputs.output-format }}
 
     # ================== 🚀 ==================
 
@@ -286,16 +305,16 @@ runs:
         }
 
         # Build badge content
-        if [ -n "${{ inputs.label }}" ]; then
+        if [ -n "${INPUT_LABEL}" ]; then
           # Label-Message-Color format
-          label_encoded=$(url_encode "${{ inputs.label }}")
-          message_encoded=$(url_encode "${{ inputs.message }}")
-          badge_content="${label_encoded}-${message_encoded}-${{ inputs.color }}"
+          label_encoded=$(url_encode "${INPUT_LABEL}")
+          message_encoded=$(url_encode "${INPUT_MESSAGE}")
+          badge_content="${label_encoded}-${message_encoded}-${INPUT_COLOR}"
           echo "::debug::Using label-message format: $badge_content"
         else
           # Message-Color format
-          message_encoded=$(url_encode "${{ inputs.message }}")
-          badge_content="${message_encoded}-${{ inputs.color }}"
+          message_encoded=$(url_encode "${INPUT_MESSAGE}")
+          badge_content="${message_encoded}-${INPUT_COLOR}"
           echo "::debug::Using message-only format: $badge_content"
         fi
 
@@ -306,41 +325,41 @@ runs:
         params=""
 
         # Add style parameter (only if not default)
-        if [ -n "${{ inputs.style }}" ] && [ "${{ inputs.style }}" != "flat" ]; then
-          params="${params}&style=${{ inputs.style }}"
-          echo "::debug::Adding style parameter: ${{ inputs.style }}"
+        if [ -n "${INPUT_STYLE}" ] && [ "${INPUT_STYLE}" != "flat" ]; then
+          params="${params}&style=${INPUT_STYLE}"
+          echo "::debug::Adding style parameter: ${INPUT_STYLE}"
         fi
 
         # Add logo parameters
-        if [ -n "${{ inputs.logo }}" ]; then
-          params="${params}&logo=${{ inputs.logo }}"
-          echo "::debug::Adding logo parameter: ${{ inputs.logo }}"
+        if [ -n "${INPUT_LOGO}" ]; then
+          params="${params}&logo=${INPUT_LOGO}"
+          echo "::debug::Adding logo parameter: ${INPUT_LOGO}"
         fi
 
-        if [ -n "${{ inputs.logo-color }}" ]; then
+        if [ -n "${INPUT_LOGO_COLOR}" ]; then
           # URL encode logo color for special characters
-          logo_color_encoded=$(echo "${{ inputs.logo-color }}" | sed 's/#/%23/g')
+          logo_color_encoded=$(echo "${INPUT_LOGO_COLOR}" | sed 's/#/%23/g')
           params="${params}&logoColor=${logo_color_encoded}"
-          echo "::debug::Adding logo color parameter: ${{ inputs.logo-color }}"
+          echo "::debug::Adding logo color parameter: ${INPUT_LOGO_COLOR}"
         fi
 
-        if [ -n "${{ inputs.logo-size }}" ]; then
-          params="${params}&logoSize=${{ inputs.logo-size }}"
-          echo "::debug::Adding logo size parameter: ${{ inputs.logo-size }}"
+        if [ -n "${INPUT_LOGO_SIZE}" ]; then
+          params="${params}&logoSize=${INPUT_LOGO_SIZE}"
+          echo "::debug::Adding logo size parameter: ${INPUT_LOGO_SIZE}"
         fi
 
         # Add label color
-        if [ -n "${{ inputs.label-color }}" ]; then
+        if [ -n "${INPUT_LABEL_COLOR}" ]; then
           # URL encode label color for special characters
-          label_color_encoded=$(echo "${{ inputs.label-color }}" | sed 's/#/%23/g')
+          label_color_encoded=$(echo "${INPUT_LABEL_COLOR}" | sed 's/#/%23/g')
           params="${params}&labelColor=${label_color_encoded}"
-          echo "::debug::Adding label color parameter: ${{ inputs.label-color }}"
+          echo "::debug::Adding label color parameter: ${INPUT_LABEL_COLOR}"
         fi
 
         # Add cache seconds
-        if [ -n "${{ inputs.cache-seconds }}" ]; then
-          params="${params}&cacheSeconds=${{ inputs.cache-seconds }}"
-          echo "::debug::Adding cache seconds parameter: ${{ inputs.cache-seconds }}"
+        if [ -n "${INPUT_CACHE_SECONDS}" ]; then
+          params="${params}&cacheSeconds=${INPUT_CACHE_SECONDS}"
+          echo "::debug::Adding cache seconds parameter: ${INPUT_CACHE_SECONDS}"
         fi
 
         # Remove leading & if params exist
@@ -353,6 +372,16 @@ runs:
 
         echo "badge-url=$badge_url" >> $GITHUB_OUTPUT
         echo "✅ Badge URL built successfully: $badge_url"
+      env:
+        INPUT_LABEL: ${{ inputs.label }}
+        INPUT_MESSAGE: ${{ inputs.message }}
+        INPUT_COLOR: ${{ inputs.color }}
+        INPUT_STYLE: ${{ inputs.style }}
+        INPUT_LOGO: ${{ inputs.logo }}
+        INPUT_LOGO_COLOR: ${{ inputs.logo-color }}
+        INPUT_LOGO_SIZE: ${{ inputs.logo-size }}
+        INPUT_LABEL_COLOR: ${{ inputs.label-color }}
+        INPUT_CACHE_SECONDS: ${{ inputs.cache-seconds }}
 
     - name: "🏷️ Generate badge formats"
       id: generate
@@ -361,14 +390,14 @@ runs:
         echo "::debug::Generating badge in multiple formats..."
 
         # Get URL from build step
-        badge_url="${{ steps.build-url.outputs.badge-url }}"
+        badge_url="${STEP_BUILD_URL_BADGE_URL}"
         echo "::debug::Using badge URL: $badge_url"
 
         # Generate alt text for accessibility
-        if [ -n "${{ inputs.label }}" ]; then
-          alt_text="${{ inputs.label }}: ${{ inputs.message }}"
+        if [ -n "${INPUT_LABEL}" ]; then
+          alt_text="${INPUT_LABEL}: ${INPUT_MESSAGE}"
         else
-          alt_text="${{ inputs.message }}"
+          alt_text="${INPUT_MESSAGE}"
         fi
 
         # Generate different formats
@@ -381,19 +410,23 @@ runs:
         echo "badge-html=${badge_html}" >> $GITHUB_OUTPUT
 
         echo "✅ Badge formats generated successfully"
+      env:
+        STEP_BUILD_URL_BADGE_URL: ${{ steps.build-url.outputs.badge-url }}
+        INPUT_LABEL: ${{ inputs.label }}
+        INPUT_MESSAGE: ${{ inputs.message }}
 
     - name: "📥 Download SVG content"
       id: download-svg-to-file
       if: ${{ inputs.output-format == 'svg' && inputs.output-file != '' }}
       shell: bash
       run: |
-        echo "::debug::Downloading SVG content from shields.io to file: ${{ steps.normalize-output-file.outputs.normalized }}"
+        echo "::debug::Downloading SVG content from shields.io to file: ${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}"
 
-        badge_url="${{ steps.build-url.outputs.badge-url }}"
+        badge_url="${STEP_BUILD_URL_BADGE_URL}"
         svg_content=""
 
         # Create output directory if needed
-        output_dir=$(dirname "${{ steps.normalize-output-file.outputs.normalized }}")
+        output_dir=$(dirname "${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}")
         if [ "$output_dir" != "." ] && [ ! -d "$output_dir" ]; then
           echo "::debug::Creating output directory: $output_dir"
           mkdir -p "$output_dir"
@@ -416,7 +449,7 @@ runs:
         # Validate SVG content
         if [ $curl_exit_code -eq 0 ] && [ -n "$svg_content" ] && [[ "$svg_content" =~ \<svg ]]; then
           echo "✅ SVG content downloaded successfully"
-          echo "${svg_content}" > "${{ steps.normalize-output-file.outputs.normalized }}"
+          echo "${svg_content}" > "${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}"
         else
           echo "::error::Failed to download valid SVG content from shields.io"
           echo "::debug::Response: ${svg_content:0:200}..."
@@ -424,9 +457,12 @@ runs:
         fi
 
         # Get absolute path and set output
-        output_file_full_path=$(realpath "${{ steps.normalize-output-file.outputs.normalized }}")
+        output_file_full_path=$(realpath "${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}")
         echo "output-file-path=${output_file_full_path}" >> $GITHUB_OUTPUT
         echo "✅ Badge saved to: ${output_file_full_path}"
+      env:
+        STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED: ${{ steps.normalize-output-file.outputs.normalized }}
+        STEP_BUILD_URL_BADGE_URL: ${{ steps.build-url.outputs.badge-url }}
 
     # ================== 🔍 ==================
 
@@ -437,7 +473,7 @@ runs:
         echo "::debug::Verifying badge generation results..."
 
         # Verify badge URL was generated
-        if [ -n "${{ steps.build-url.outputs.badge-url }}" ]; then
+        if [ -n "${STEP_BUILD_URL_BADGE_URL}" ]; then
           echo "✅ Badge URL generated successfully"
           echo "badge-url-generated=true" >> $GITHUB_OUTPUT
         else
@@ -446,7 +482,7 @@ runs:
         fi
 
         # Verify badge formats were generated
-        if [ -n "${{ steps.generate.outputs.badge-markdown }}" ] && [ -n "${{ steps.generate.outputs.badge-html }}" ]; then
+        if [ -n "${STEP_GENERATE_BADGE_MARKDOWN}" ] && [ -n "${STEP_GENERATE_BADGE_HTML}" ]; then
           echo "✅ Badge formats generated successfully"
           echo "badge-formats-generated=true" >> $GITHUB_OUTPUT
         else
@@ -455,14 +491,14 @@ runs:
         fi
 
         # Verify output file if requested
-        if [ -n "${{ inputs.output-file }}" ]; then
-          if [ -f "${{ steps.normalize-output-file.outputs.normalized }}" ]; then
-            file_size=$(wc -c < "${{ steps.normalize-output-file.outputs.normalized }}" 2>/dev/null || echo "0")
-            echo "✅ Output file created: ${{ steps.normalize-output-file.outputs.normalized }} ($file_size bytes)"
+        if [ -n "${INPUT_OUTPUT_FILE}" ]; then
+          if [ -f "${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}" ]; then
+            file_size=$(wc -c < "${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}" 2>/dev/null || echo "0")
+            echo "✅ Output file created: ${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED} ($file_size bytes)"
             echo "output-file-created=true" >> $GITHUB_OUTPUT
             echo "output-file-size=$file_size" >> $GITHUB_OUTPUT
           else
-            echo "❌ Output file was not created: ${{ steps.normalize-output-file.outputs.normalized }}"
+            echo "❌ Output file was not created: ${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}"
             echo "output-file-created=false" >> $GITHUB_OUTPUT
             echo "output-file-size=0" >> $GITHUB_OUTPUT
           fi
@@ -473,6 +509,12 @@ runs:
         fi
 
         echo "::debug::Badge generation verification completed"
+      env:
+        STEP_BUILD_URL_BADGE_URL: ${{ steps.build-url.outputs.badge-url }}
+        STEP_GENERATE_BADGE_MARKDOWN: ${{ steps.generate.outputs.badge-markdown }}
+        STEP_GENERATE_BADGE_HTML: ${{ steps.generate.outputs.badge-html }}
+        INPUT_OUTPUT_FILE: ${{ inputs.output-file }}
+        STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED: ${{ steps.normalize-output-file.outputs.normalized }}
 
     # ================== 📊 ==================
 
@@ -481,7 +523,7 @@ runs:
       shell: bash
       run: |
         # Determine final status
-        if [ "${{ steps.generate.outcome }}" = "success" ]; then
+        if [ "${STEP_GENERATE_OUTCOME}" = "success" ]; then
           status_icon="✅"
           status_text="Success"
         else
@@ -489,51 +531,74 @@ runs:
           status_text="Failed"
         fi
 
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>🏷️ Generate Badge: ${{ inputs.label || inputs.message }}</summary>
+        cat >> $GITHUB_STEP_SUMMARY << EOF
+        <details><summary>🏷️ Generate Badge: ${INPUT_LABEL_EXPR}</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 🏷️ Label | `${{ inputs.label || '(none)' }}` |
-        | 💬 Message | `${{ inputs.message }}` |
-        | 🎨 Color | `${{ inputs.color }}` |
-        | 🎨 Label Color | `${{ inputs.label-color || '(default)' }}` |
-        | 🎭 Style | `${{ inputs.style }}` |
-        | 🔗 Logo | `${{ inputs.logo || '(none)' }}` |
-        | 🎨 Logo Color | `${{ inputs.logo-color || '(default)' }}` |
-        | 📏 Logo Size | `${{ inputs.logo-size || '(default)' }}` |
-        | 📁 Output File | `${{ steps.normalize-output-file.outputs.normalized || '(none)' }}` |
-        | 📋 Output Format | `${{ inputs.output-format }}` |
-        | ⏱️ Cache Seconds | `${{ inputs.cache-seconds || '(default)' }}` |
+        | 🏷️ Label | \`${INPUT_LABEL}\` |
+        | 💬 Message | \`${INPUT_MESSAGE}\` |
+        | 🎨 Color | \`${INPUT_COLOR}\` |
+        | 🎨 Label Color | \`${INPUT_LABEL_COLOR}\` |
+        | 🎭 Style | \`${INPUT_STYLE}\` |
+        | 🔗 Logo | \`${INPUT_LOGO}\` |
+        | 🎨 Logo Color | \`${INPUT_LOGO_COLOR}\` |
+        | 📏 Logo Size | \`${INPUT_LOGO_SIZE}\` |
+        | 📁 Output File | \`${STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED}\` |
+        | 📋 Output Format | \`${INPUT_OUTPUT_FORMAT}\` |
+        | ⏱️ Cache Seconds | \`${INPUT_CACHE_SECONDS}\` |
 
         ## 📤 Badge Results
         | Metric | Value |
         |--------|-------|
-        | 🌐 Badge URL | [${{ steps.generate.outputs.badge-url }}](${{ steps.generate.outputs.badge-url }}) |
-        | 📝 Markdown | `${{ steps.generate.outputs.badge-markdown }}` |
-        | 🔗 HTML | `${{ steps.generate.outputs.badge-html }}` |
-        | 📁 Output File Created | `${{ steps.verify-badge.outputs.output-file-created }}` |
-        | 📏 Output File Size | `${{ steps.verify-badge.outputs.output-file-size }} bytes` |
-        | 📁 Output File Path | `${{ steps.download-svg-to-file.outputs.output-file-path || '(not created)' }}` |
+        | 🌐 Badge URL | [${STEP_GENERATE_BADGE_URL}](${STEP_GENERATE_BADGE_URL}) |
+        | 📝 Markdown | \`${STEP_GENERATE_BADGE_MARKDOWN}\` |
+        | 🔗 HTML | \`${STEP_GENERATE_BADGE_HTML}\` |
+        | 📁 Output File Created | \`${STEP_VERIFY_BADGE_OUTPUT_FILE_CREATED}\` |
+        | 📏 Output File Size | \`${STEP_VERIFY_BADGE_OUTPUT_FILE_SIZE} bytes\` |
+        | 📁 Output File Path | \`${STEP_DOWNLOAD_SVG_TO_FILE_OUTPUT_FILE_PATH}\` |
 
         ## 🖼️ Badge Preview
-        ${{ steps.generate.outputs.badge-markdown }}
+        ${STEP_GENERATE_BADGE_MARKDOWN}
 
         ## ⚙️ Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 🛠️ URL Building | `${{ steps.build-url.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🏷️ Format Generation | `${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 📥 SVG Download | `${{ (inputs.output-format == 'svg' && inputs.output-file != '') && (steps.download-svg-to-file.outcome == 'success' && '✅ Completed' || '❌ Failed') || '⏭️ Skipped' }}` |
-        | � Badge Verification | `${{ steps.verify-badge.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 🛠️ URL Building | \`${STEP_BUILD_URL_OUTCOME_LABEL}\` |
+        | 🏷️ Format Generation | \`${STEP_GENERATE_OUTCOME_LABEL}\` |
+        | 📥 SVG Download | \`${INPUT_OUTPUT_FORMAT_LABEL}\` |
+        | � Badge Verification | \`${STEP_VERIFY_BADGE_OUTCOME_LABEL}\` |
 
         </details>
         EOF
       env:
         status_icon: ${{ steps.generate.outcome == 'success' && '✅' || '❌' }}
         status_text: ${{ steps.generate.outcome == 'success' && 'Success' || 'Failed' }}
+        STEP_GENERATE_OUTCOME: ${{ steps.generate.outcome }}
+        INPUT_LABEL_EXPR: ${{ inputs.label || inputs.message }}
+        INPUT_LABEL: ${{ inputs.label || '(none)' }}
+        INPUT_MESSAGE: ${{ inputs.message }}
+        INPUT_COLOR: ${{ inputs.color }}
+        INPUT_LABEL_COLOR: ${{ inputs.label-color || '(default)' }}
+        INPUT_STYLE: ${{ inputs.style }}
+        INPUT_LOGO: ${{ inputs.logo || '(none)' }}
+        INPUT_LOGO_COLOR: ${{ inputs.logo-color || '(default)' }}
+        INPUT_LOGO_SIZE: ${{ inputs.logo-size || '(default)' }}
+        STEP_NORMALIZE_OUTPUT_FILE_NORMALIZED: ${{ steps.normalize-output-file.outputs.normalized || '(none)' }}
+        INPUT_OUTPUT_FORMAT: ${{ inputs.output-format }}
+        INPUT_CACHE_SECONDS: ${{ inputs.cache-seconds || '(default)' }}
+        STEP_GENERATE_BADGE_URL: ${{ steps.generate.outputs.badge-url }}
+        STEP_GENERATE_BADGE_MARKDOWN: ${{ steps.generate.outputs.badge-markdown }}
+        STEP_GENERATE_BADGE_HTML: ${{ steps.generate.outputs.badge-html }}
+        STEP_VERIFY_BADGE_OUTPUT_FILE_CREATED: ${{ steps.verify-badge.outputs.output-file-created }}
+        STEP_VERIFY_BADGE_OUTPUT_FILE_SIZE: ${{ steps.verify-badge.outputs.output-file-size }}
+        STEP_DOWNLOAD_SVG_TO_FILE_OUTPUT_FILE_PATH: ${{ steps.download-svg-to-file.outputs.output-file-path || '(not created)' }}
+        STEP_BUILD_URL_OUTCOME_LABEL: ${{ steps.build-url.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_GENERATE_OUTCOME_LABEL: ${{ steps.generate.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        INPUT_OUTPUT_FORMAT_LABEL: ${{ (inputs.output-format == 'svg' && inputs.output-file != '') && (steps.download-svg-to-file.outcome == 'success' && '✅ Completed' || '❌ Failed') || '⏭️ Skipped' }}
+        STEP_VERIFY_BADGE_OUTCOME_LABEL: ${{ steps.verify-badge.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
 
 branding:
   icon: "award"

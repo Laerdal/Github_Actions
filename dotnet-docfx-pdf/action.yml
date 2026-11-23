@@ -115,8 +115,8 @@ runs:
 
         for param in verbose warningsAsErrors; do
           case $param in
-            verbose) value="${{ inputs.verbose }}" ;;
-            warningsAsErrors) value="${{ inputs.warningsAsErrors }}" ;;
+            verbose) value="${INPUT_VERBOSE}" ;;
+            warningsAsErrors) value="${INPUT_WARNINGSASERRORS}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -125,6 +125,9 @@ runs:
         done
 
         echo "✅ Boolean input validation completed successfully"
+      env:
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+        INPUT_WARNINGSASERRORS: ${{ inputs.warningsAsErrors }}
 
     - name: "✅ Validate input : config"
       if: ${{ inputs.config != '' }}
@@ -132,12 +135,14 @@ runs:
       run: |
         echo "::debug::Validating config input for DocFX PDF generation"
 
-        if [ ! -f "${{ steps.normalize-config.outputs.normalized }}" ]; then
-          echo "::error file=${{ steps.normalize-config.outputs.normalized }}::DocFX configuration file not found: ${{ steps.normalize-config.outputs.normalized }}"
+        if [ ! -f "${STEP_NORMALIZE_CONFIG_NORMALIZED}" ]; then
+          echo "::error file=${STEP_NORMALIZE_CONFIG_NORMALIZED}::DocFX configuration file not found: ${STEP_NORMALIZE_CONFIG_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Config input validation completed successfully"
+      env:
+        STEP_NORMALIZE_CONFIG_NORMALIZED: ${{ steps.normalize-config.outputs.normalized }}
 
     - name: "✅ Validate input : logLevel"
       if: ${{ inputs.logLevel != '' && inputs.logLevel != 'info' }}
@@ -145,12 +150,14 @@ runs:
       run: |
         echo "::debug::Validating logLevel input for DocFX PDF generation"
 
-        case "${{ inputs.logLevel }}" in
+        case "${INPUT_LOGLEVEL}" in
           error|warning|info|verbose|diagnostic) ;;
           *) echo "::error::Invalid logLevel. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
         esac
 
         echo "✅ Log-level input validation completed successfully"
+      env:
+        INPUT_LOGLEVEL: ${{ inputs.logLevel }}
 
     - name: "✅ Validate input : docfx-version"
       if: ${{ inputs.docfx-version != '' }}
@@ -158,11 +165,13 @@ runs:
       run: |
         echo "::debug::Validating docfx-version input for DocFX PDF generation"
 
-        if ! [[ "${{ inputs.docfx-version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "::warning::Version format may be invalid. Expected format: X.Y.Z, got: ${{ inputs.docfx-version }}"
+        if ! [[ "${INPUT_DOCFX_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::warning::Version format may be invalid. Expected format: X.Y.Z, got: ${INPUT_DOCFX_VERSION}"
         fi
 
         echo "✅ docfx-version input validation completed successfully"
+      env:
+        INPUT_DOCFX_VERSION: ${{ inputs.docfx-version }}
 
     # ================== 🏗️ ==================
 
@@ -176,24 +185,24 @@ runs:
         ARGS="run docfx pdf"
 
         # Add config file path
-        if [ -n "${{ steps.normalize-config.outputs.normalized }}" ]; then
-          ARGS="$ARGS '${{ steps.normalize-config.outputs.normalized }}'"
+        if [ -n "${STEP_NORMALIZE_CONFIG_NORMALIZED}" ]; then
+          ARGS="$ARGS '${STEP_NORMALIZE_CONFIG_NORMALIZED}'"
         fi
-        CONFIG_PATH="${{ steps.normalize-config.outputs.normalized }}"
+        CONFIG_PATH="${STEP_NORMALIZE_CONFIG_NORMALIZED}"
         echo "config-path=$CONFIG_PATH" >> $GITHUB_OUTPUT
 
         # Add output directory
-        if [ -n "${{ steps.normalize-output.outputs.normalized }}" ]; then
-          ARGS="$ARGS --output '${{ steps.normalize-output.outputs.normalized }}'"
+        if [ -n "${STEP_NORMALIZE_OUTPUT_NORMALIZED}" ]; then
+          ARGS="$ARGS --output '${STEP_NORMALIZE_OUTPUT_NORMALIZED}'"
         fi
-        OUTPUT_PATH="${{ steps.normalize-output.outputs.normalized }}"
+        OUTPUT_PATH="${STEP_NORMALIZE_OUTPUT_NORMALIZED}"
         echo "output-path=$OUTPUT_PATH" >> $GITHUB_OUTPUT
 
         # Boolean flags
         for param in verbose warningsAsErrors; do
           case $param in
-            verbose) value="${{ inputs.verbose }}" ;;
-            warningsAsErrors) value="${{ inputs.warningsAsErrors }}" ;;
+            verbose) value="${INPUT_VERBOSE}" ;;
+            warningsAsErrors) value="${INPUT_WARNINGSASERRORS}" ;;
           esac
           if [ "$value" == "true" ]; then
             ARGS="$ARGS --${param}"
@@ -201,18 +210,25 @@ runs:
         done
 
         # Handle parameters with meaningful defaults
-        if [ "${{ inputs.logLevel }}" != "info" ]; then
-          ARGS="$ARGS --logLevel '${{ inputs.logLevel }}'"
+        if [ "${INPUT_LOGLEVEL}" != "info" ]; then
+          ARGS="$ARGS --logLevel '${INPUT_LOGLEVEL}'"
         fi
 
         # Log file
-        if [ -n "${{ inputs.logFile }}" ]; then
-          ARGS="$ARGS --log '${{ inputs.logFile }}'"
+        if [ -n "${INPUT_LOGFILE}" ]; then
+          ARGS="$ARGS --log '${INPUT_LOGFILE}'"
         fi
 
         echo "::debug::Generated arguments: $ARGS"
         echo "arguments=$ARGS" >> $GITHUB_OUTPUT
         echo "✅ Arguments built successfully"
+      env:
+        STEP_NORMALIZE_CONFIG_NORMALIZED: ${{ steps.normalize-config.outputs.normalized }}
+        STEP_NORMALIZE_OUTPUT_NORMALIZED: ${{ steps.normalize-output.outputs.normalized }}
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+        INPUT_WARNINGSASERRORS: ${{ inputs.warningsAsErrors }}
+        INPUT_LOGLEVEL: ${{ inputs.logLevel }}
+        INPUT_LOGFILE: ${{ inputs.logFile }}
 
     # ================== 🚀 ==================
 
@@ -241,7 +257,7 @@ runs:
       run: |
         echo "📊 Analyzing generated PDF files..."
 
-        OUTPUT_DIR="${{ steps.build-args.outputs.output-path }}"
+        OUTPUT_DIR="${STEP_BUILD_ARGS_OUTPUT_PATH}"
 
         if [ -d "$OUTPUT_DIR" ]; then
           # Find PDF files
@@ -296,6 +312,8 @@ runs:
           echo "output-size=0" >> $GITHUB_OUTPUT
           echo "pdf-files=" >> $GITHUB_OUTPUT
         fi
+      env:
+        STEP_BUILD_ARGS_OUTPUT_PATH: ${{ steps.build-args.outputs.output-path }}
 
     # ================== 📊 ==================
 
@@ -303,46 +321,60 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        cat >> $GITHUB_STEP_SUMMARY << EOF
         <details><summary>📄 DocFX PDF</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 📋 Config File | `${{ steps.normalize-config.outputs.normalized }}` |
-        | 📁 Output Directory | `${{ steps.normalize-output.outputs.normalized }}` |
-        | 📊 Log Level | `${{ inputs.logLevel }}` |
+        | 📋 Config File | \`${STEP_NORMALIZE_CONFIG_NORMALIZED}\` |
+        | 📁 Output Directory | \`${STEP_NORMALIZE_OUTPUT_NORMALIZED}\` |
+        | 📊 Log Level | \`${INPUT_LOGLEVEL}\` |
 
         ## 📤 Generation Results
         | Metric | Value |
         |--------|-------|
-        | 📁 Output Path | `${{ steps.build-args.outputs.output-path }}` |
-        | 📋 Config Path | `${{ steps.build-args.outputs.config-path }}` |
-        | 📄 PDF Files Generated | `${{ steps.analyze.outputs.files-count }}` |
-        | 📏 Total Size | `${{ steps.analyze.outputs.output-size }} bytes` |
+        | 📁 Output Path | \`${STEP_BUILD_ARGS_OUTPUT_PATH}\` |
+        | 📋 Config Path | \`${STEP_BUILD_ARGS_CONFIG_PATH}\` |
+        | 📄 PDF Files Generated | \`${STEP_ANALYZE_FILES_COUNT}\` |
+        | 📏 Total Size | \`${STEP_ANALYZE_OUTPUT_SIZE} bytes\` |
 
         ## 📄 Generated PDF Files
         | File | Status |
         |------|--------|
-        ${{ steps.analyze.outputs.pdf-files != '' && steps.analyze.outputs.pdf-files || '| No PDF files generated | ❌ |' }}
+        ${STEP_ANALYZE_PDF_FILES_LABEL}
 
         ## ⚙️ Configuration Options
         | Option | Status |
         |--------|--------|
-        | 🔍 Verbose Logging | `${{ inputs.verbose }}` |
-        | ⚠️ Warnings as Errors | `${{ inputs.warningsAsErrors }}` |
+        | 🔍 Verbose Logging | \`${INPUT_VERBOSE}\` |
+        | ⚠️ Warnings as Errors | \`${INPUT_WARNINGSASERRORS}\` |
 
         ## 🔧 Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 📦 Tool Installation | `✅ Completed` |
-        | � Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | �📄 PDF Generation | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 📊 Output Analysis | `${{ steps.analyze.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 📦 Tool Installation | \`✅ Completed\` |
+        | � Argument Building | \`${STEP_BUILD_ARGS_OUTCOME_LABEL}\` |
+        | �📄 PDF Generation | \`${STEP_RUN_DOTNET_OUTCOME_LABEL}\` |
+        | 📊 Output Analysis | \`${STEP_ANALYZE_OUTCOME_LABEL}\` |
 
         </details>
         EOF
+      env:
+        STEP_NORMALIZE_CONFIG_NORMALIZED: ${{ steps.normalize-config.outputs.normalized }}
+        STEP_NORMALIZE_OUTPUT_NORMALIZED: ${{ steps.normalize-output.outputs.normalized }}
+        INPUT_LOGLEVEL: ${{ inputs.logLevel }}
+        STEP_BUILD_ARGS_OUTPUT_PATH: ${{ steps.build-args.outputs.output-path }}
+        STEP_BUILD_ARGS_CONFIG_PATH: ${{ steps.build-args.outputs.config-path }}
+        STEP_ANALYZE_FILES_COUNT: ${{ steps.analyze.outputs.files-count }}
+        STEP_ANALYZE_OUTPUT_SIZE: ${{ steps.analyze.outputs.output-size }}
+        STEP_ANALYZE_PDF_FILES_LABEL: ${{ steps.analyze.outputs.pdf-files != '' && steps.analyze.outputs.pdf-files || '| No PDF files generated | ❌ |' }}
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+        INPUT_WARNINGSASERRORS: ${{ inputs.warningsAsErrors }}
+        STEP_BUILD_ARGS_OUTCOME_LABEL: ${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_RUN_DOTNET_OUTCOME_LABEL: ${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_ANALYZE_OUTCOME_LABEL: ${{ steps.analyze.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
 
 branding:
   icon: "file-text"

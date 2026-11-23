@@ -186,13 +186,13 @@ runs:
 
         for param in verbose warningsAsErrors debug exportRawModel exportViewModel disableGitFeatures dryRun; do
           case $param in
-            verbose) value="${{ inputs.verbose }}" ;;
-            warningsAsErrors) value="${{ inputs.warningsAsErrors }}" ;;
-            debug) value="${{ inputs.debug }}" ;;
-            exportRawModel) value="${{ inputs.exportRawModel }}" ;;
-            exportViewModel) value="${{ inputs.exportViewModel }}" ;;
-            disableGitFeatures) value="${{ inputs.disableGitFeatures }}" ;;
-            dryRun) value="${{ inputs.dryRun }}" ;;
+            verbose) value="${INPUT_VERBOSE}" ;;
+            warningsAsErrors) value="${INPUT_WARNINGSASERRORS}" ;;
+            debug) value="${INPUT_DEBUG}" ;;
+            exportRawModel) value="${INPUT_EXPORTRAWMODEL}" ;;
+            exportViewModel) value="${INPUT_EXPORTVIEWMODEL}" ;;
+            disableGitFeatures) value="${INPUT_DISABLEGITFEATURES}" ;;
+            dryRun) value="${INPUT_DRYRUN}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -201,6 +201,14 @@ runs:
         done
 
         echo "✅ Boolean input validation completed successfully"
+      env:
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+        INPUT_WARNINGSASERRORS: ${{ inputs.warningsAsErrors }}
+        INPUT_DEBUG: ${{ inputs.debug }}
+        INPUT_EXPORTRAWMODEL: ${{ inputs.exportRawModel }}
+        INPUT_EXPORTVIEWMODEL: ${{ inputs.exportViewModel }}
+        INPUT_DISABLEGITFEATURES: ${{ inputs.disableGitFeatures }}
+        INPUT_DRYRUN: ${{ inputs.dryRun }}
 
     - name: "✅ Validate input : config"
       if: ${{ inputs.config != '' }}
@@ -208,12 +216,14 @@ runs:
       run: |
         echo "::debug::Validating config input for DocFX documentation generation"
 
-        if [ ! -f "${{ steps.normalize-config.outputs.normalized }}" ]; then
-          echo "::error file=${{ steps.normalize-config.outputs.normalized }}::DocFX configuration file not found: ${{ steps.normalize-config.outputs.normalized }}"
+        if [ ! -f "${STEP_NORMALIZE_CONFIG_NORMALIZED}" ]; then
+          echo "::error file=${STEP_NORMALIZE_CONFIG_NORMALIZED}::DocFX configuration file not found: ${STEP_NORMALIZE_CONFIG_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Config input validation completed successfully"
+      env:
+        STEP_NORMALIZE_CONFIG_NORMALIZED: ${{ steps.normalize-config.outputs.normalized }}
 
     - name: "✅ Validate input : logLevel"
       if: ${{ inputs.logLevel != '' && inputs.logLevel != 'info' }}
@@ -221,12 +231,14 @@ runs:
       run: |
         echo "::debug::Validating logLevel input for DocFX documentation generation"
 
-        case "${{ inputs.logLevel }}" in
+        case "${INPUT_LOGLEVEL}" in
           error|warning|info|verbose|diagnostic) ;;
           *) echo "::error::Invalid logLevel. Must be one of: error, warning, info, verbose, diagnostic"; exit 1 ;;
         esac
 
         echo "✅ Log-level input validation completed successfully"
+      env:
+        INPUT_LOGLEVEL: ${{ inputs.logLevel }}
 
     - name: "✅ Validate input : metadata"
       if: ${{ inputs.metadata != '' }}
@@ -234,12 +246,14 @@ runs:
       run: |
         echo "::debug::Validating metadata input for DocFX documentation generation"
 
-        if ! echo "${{ inputs.metadata }}" | jq empty >/dev/null 2>&1; then
-          echo "::error::Metadata must be a valid JSON string, got: ${{ inputs.metadata }}"
+        if ! echo "${INPUT_METADATA}" | jq empty >/dev/null 2>&1; then
+          echo "::error::Metadata must be a valid JSON string, got: ${INPUT_METADATA}"
           exit 1
         fi
 
         echo "✅ Metadata input validation completed successfully"
+      env:
+        INPUT_METADATA: ${{ inputs.metadata }}
 
     - name: "✅ Validate input : maxParallelism"
       if: ${{ inputs.maxParallelism != '' && inputs.maxParallelism != '0' }}
@@ -247,12 +261,14 @@ runs:
       run: |
         echo "::debug::Validating maxParallelism input for DocFX documentation generation"
 
-        if ! [[ "${{ inputs.maxParallelism }}" =~ ^[0-9]+$ ]]; then
-          echo "::error::maxParallelism must be a non-negative integer, got: ${{ inputs.maxParallelism }}"
+        if ! [[ "${INPUT_MAXPARALLELISM}" =~ ^[0-9]+$ ]]; then
+          echo "::error::maxParallelism must be a non-negative integer, got: ${INPUT_MAXPARALLELISM}"
           exit 1
         fi
 
         echo "✅ Max-parallelism input validation completed successfully"
+      env:
+        INPUT_MAXPARALLELISM: ${{ inputs.maxParallelism }}
 
     - name: "✅ Validate input : postProcessors"
       if: ${{ inputs.postProcessors != '' }}
@@ -260,15 +276,17 @@ runs:
       run: |
         echo "::debug::Validating postProcessors input for DocFX documentation generation"
 
-        IFS=',' read -ra PROCESSORS <<< "${{ inputs.postProcessors }}"
+        IFS=',' read -ra PROCESSORS <<< "${INPUT_POSTPROCESSORS}"
         for processor in "${PROCESSORS[@]}"; do
           if [[ -z "$processor" ]]; then
-            echo "::error::Post-processors must be a comma-separated list of non-empty values, got: ${{ inputs.postProcessors }}"
+            echo "::error::Post-processors must be a comma-separated list of non-empty values, got: ${INPUT_POSTPROCESSORS}"
             exit 1
           fi
         done
 
         echo "✅ Post-processors input validation completed successfully"
+      env:
+        INPUT_POSTPROCESSORS: ${{ inputs.postProcessors }}
 
     - name: "✅ Validate input : docfx-version"
       if: ${{ inputs.docfx-version != '' }}
@@ -276,11 +294,13 @@ runs:
       run: |
         echo "::debug::Validating docfx-version input for DocFX documentation generation"
 
-        if ! [[ "${{ inputs.docfx-version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "::warning::Version format may be invalid. Expected format: X.Y.Z, got: ${{ inputs.docfx-version }}"
+        if ! [[ "${INPUT_DOCFX_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::warning::Version format may be invalid. Expected format: X.Y.Z, got: ${INPUT_DOCFX_VERSION}"
         fi
 
         echo "✅ docfx-version input validation completed successfully"
+      env:
+        INPUT_DOCFX_VERSION: ${{ inputs.docfx-version }}
 
     - name: "✅ Validate input : markdownEngineProperties"
       if: ${{ inputs.markdownEngineProperties != '' }}
@@ -288,12 +308,14 @@ runs:
       run: |
         echo "::debug::Validating markdownEngineProperties input for DocFX documentation generation"
 
-        if ! echo "${{ inputs.markdownEngineProperties }}" | jq empty >/dev/null 2>&1; then
-          echo "::error::markdownEngineProperties must be a valid JSON string, got: ${{ inputs.markdownEngineProperties }}"
+        if ! echo "${INPUT_MARKDOWNENGINEPROPERTIES}" | jq empty >/dev/null 2>&1; then
+          echo "::error::markdownEngineProperties must be a valid JSON string, got: ${INPUT_MARKDOWNENGINEPROPERTIES}"
           exit 1
         fi
 
         echo "✅ markdownEngineProperties input validation completed successfully"
+      env:
+        INPUT_MARKDOWNENGINEPROPERTIES: ${{ inputs.markdownEngineProperties }}
 
     - name: "✅ Validate input : xref"
       if: ${{ inputs.xref != '' }}
@@ -301,7 +323,7 @@ runs:
       run: |
         echo "::debug::Validating xref input for DocFX documentation generation"
 
-        IFS=',' read -ra XREF_URLS <<< "${{ inputs.xref }}"
+        IFS=',' read -ra XREF_URLS <<< "${INPUT_XREF}"
         for url in "${XREF_URLS[@]}"; do
           if ! [[ "$url" =~ ^https?:// ]]; then
             echo "::error::Each xref URL must start with http:// or https://, got: $url"
@@ -310,6 +332,8 @@ runs:
         done
 
         echo "✅ Xref input validation completed successfully"
+      env:
+        INPUT_XREF: ${{ inputs.xref }}
 
     # ================== 🏗️  ==================
 
@@ -323,20 +347,20 @@ runs:
         ARGS="run docfx build"
 
         # Add config file path
-        if [ -n "${{ steps.normalize-config.outputs.normalized }}" ]; then
-          ARGS="$ARGS '${{ steps.normalize-config.outputs.normalized }}'"
+        if [ -n "${STEP_NORMALIZE_CONFIG_NORMALIZED}" ]; then
+          ARGS="$ARGS '${STEP_NORMALIZE_CONFIG_NORMALIZED}'"
         fi
 
         # Boolean flags
         for param in verbose warningsAsErrors debug exportRawModel exportViewModel disableGitFeatures dryRun; do
           case $param in
-            verbose) value="${{ inputs.verbose }}" ;;
-            warningsAsErrors) value="${{ inputs.warningsAsErrors }}" ;;
-            debug) value="${{ inputs.debug }}" ;;
-            exportRawModel) value="${{ inputs.exportRawModel }}" ;;
-            exportViewModel) value="${{ inputs.exportViewModel }}" ;;
-            disableGitFeatures) value="${{ inputs.disableGitFeatures }}" ;;
-            dryRun) value="${{ inputs.dryRun }}" ;;
+            verbose) value="${INPUT_VERBOSE}" ;;
+            warningsAsErrors) value="${INPUT_WARNINGSASERRORS}" ;;
+            debug) value="${INPUT_DEBUG}" ;;
+            exportRawModel) value="${INPUT_EXPORTRAWMODEL}" ;;
+            exportViewModel) value="${INPUT_EXPORTVIEWMODEL}" ;;
+            disableGitFeatures) value="${INPUT_DISABLEGITFEATURES}" ;;
+            dryRun) value="${INPUT_DRYRUN}" ;;
           esac
           if [ "$value" = "true" ]; then
             ARGS="$ARGS --${param}"
@@ -346,14 +370,14 @@ runs:
         # Key-value options (only add if not default values)
         for param in output template debugOutput rawModelOutputFolder viewModelOutputFolder markdownEngineProperties postProcessors log; do
           case $param in
-            output) value="${{ steps.normalize-output.outputs.normalized }}" ;;
-            template) value="${{ inputs.template }}" ;;
-            debugOutput) value="${{ steps.normalize-debugoutput.outputs.normalized }}" ;;
-            rawModelOutputFolder) value="${{ steps.normalize-rawmodeloutputfolder.outputs.normalized }}" ;;
-            viewModelOutputFolder) value="${{ steps.normalize-viewmodeloutputfolder.outputs.normalized }}" ;;
-            markdownEngineProperties) value="${{ inputs.markdownEngineProperties }}" ;;
-            postProcessors) value="${{ inputs.postProcessors }}" ;;
-            log) value="${{ steps.normalize-log.outputs.normalized }}" ;;
+            output) value="${STEP_NORMALIZE_OUTPUT_NORMALIZED}" ;;
+            template) value="${INPUT_TEMPLATE}" ;;
+            debugOutput) value="${STEP_NORMALIZE_DEBUGOUTPUT_NORMALIZED}" ;;
+            rawModelOutputFolder) value="${STEP_NORMALIZE_RAWMODELOUTPUTFOLDER_NORMALIZED}" ;;
+            viewModelOutputFolder) value="${STEP_NORMALIZE_VIEWMODELOUTPUTFOLDER_NORMALIZED}" ;;
+            markdownEngineProperties) value="${INPUT_MARKDOWNENGINEPROPERTIES}" ;;
+            postProcessors) value="${INPUT_POSTPROCESSORS}" ;;
+            log) value="${STEP_NORMALIZE_LOG_NORMALIZED}" ;;
           esac
           if [ -n "$value" ]; then
             ARGS="$ARGS --$param '$value'"
@@ -361,29 +385,29 @@ runs:
         done
 
         # Handle parameters with meaningful defaults
-        if [ "${{ inputs.logLevel }}" != "info" ]; then
-          ARGS="$ARGS --logLevel '${{ inputs.logLevel }}'"
+        if [ "${INPUT_LOGLEVEL}" != "info" ]; then
+          ARGS="$ARGS --logLevel '${INPUT_LOGLEVEL}'"
         fi
 
-        if [ "${{ inputs.theme }}" != "default" ]; then
-          ARGS="$ARGS --theme '${{ inputs.theme }}'"
+        if [ "${INPUT_THEME}" != "default" ]; then
+          ARGS="$ARGS --theme '${INPUT_THEME}'"
         fi
 
-        if [ "${{ inputs.maxParallelism }}" != "0" ]; then
-          ARGS="$ARGS --maxParallelism '${{ inputs.maxParallelism }}'"
+        if [ "${INPUT_MAXPARALLELISM}" != "0" ]; then
+          ARGS="$ARGS --maxParallelism '${INPUT_MAXPARALLELISM}'"
         fi
 
         # Special handling for metadata (JSON conversion)
-        if [ -n "${{ inputs.metadata }}" ]; then
+        if [ -n "${INPUT_METADATA}" ]; then
           # Convert JSON object to key-value pairs for --metadata flags
           while IFS= read -r metadata_arg; do
             ARGS="$ARGS $metadata_arg"
-          done < <(echo "${{ inputs.metadata }}" | jq -r 'to_entries[] | "--metadata " + .key + "=\"" + (.value | tostring) + "\""')
+          done < <(echo "${INPUT_METADATA}" | jq -r 'to_entries[] | "--metadata " + .key + "=\"" + (.value | tostring) + "\""')
         fi
 
         # Special handling for xref (comma-separated URLs)
-        if [ -n "${{ inputs.xref }}" ]; then
-          IFS=',' read -ra XREF_URLS <<< "${{ inputs.xref }}"
+        if [ -n "${INPUT_XREF}" ]; then
+          IFS=',' read -ra XREF_URLS <<< "${INPUT_XREF}"
           for url in "${XREF_URLS[@]}"; do
             ARGS="$ARGS --xref '$url'"
           done
@@ -392,6 +416,28 @@ runs:
         echo "::debug::Generated arguments: $ARGS"
         echo "arguments=$ARGS" >> $GITHUB_OUTPUT
         echo "✅ Arguments built successfully"
+      env:
+        STEP_NORMALIZE_CONFIG_NORMALIZED: ${{ steps.normalize-config.outputs.normalized }}
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+        INPUT_WARNINGSASERRORS: ${{ inputs.warningsAsErrors }}
+        INPUT_DEBUG: ${{ inputs.debug }}
+        INPUT_EXPORTRAWMODEL: ${{ inputs.exportRawModel }}
+        INPUT_EXPORTVIEWMODEL: ${{ inputs.exportViewModel }}
+        INPUT_DISABLEGITFEATURES: ${{ inputs.disableGitFeatures }}
+        INPUT_DRYRUN: ${{ inputs.dryRun }}
+        STEP_NORMALIZE_OUTPUT_NORMALIZED: ${{ steps.normalize-output.outputs.normalized }}
+        INPUT_TEMPLATE: ${{ inputs.template }}
+        STEP_NORMALIZE_DEBUGOUTPUT_NORMALIZED: ${{ steps.normalize-debugoutput.outputs.normalized }}
+        STEP_NORMALIZE_RAWMODELOUTPUTFOLDER_NORMALIZED: ${{ steps.normalize-rawmodeloutputfolder.outputs.normalized }}
+        STEP_NORMALIZE_VIEWMODELOUTPUTFOLDER_NORMALIZED: ${{ steps.normalize-viewmodeloutputfolder.outputs.normalized }}
+        INPUT_MARKDOWNENGINEPROPERTIES: ${{ inputs.markdownEngineProperties }}
+        INPUT_POSTPROCESSORS: ${{ inputs.postProcessors }}
+        STEP_NORMALIZE_LOG_NORMALIZED: ${{ steps.normalize-log.outputs.normalized }}
+        INPUT_LOGLEVEL: ${{ inputs.logLevel }}
+        INPUT_THEME: ${{ inputs.theme }}
+        INPUT_MAXPARALLELISM: ${{ inputs.maxParallelism }}
+        INPUT_METADATA: ${{ inputs.metadata }}
+        INPUT_XREF: ${{ inputs.xref }}
 
     # ================== 🚀 ==================
 
@@ -420,7 +466,7 @@ runs:
       run: |
         echo "::debug::Verifying DocFX documentation generation..."
 
-        OUTPUT_DIR="${{ steps.normalize-output.outputs.normalized }}"
+        OUTPUT_DIR="${STEP_NORMALIZE_OUTPUT_NORMALIZED}"
 
         # Check if output directory exists and has content
         if [ -d "$OUTPUT_DIR" ]; then
@@ -445,6 +491,8 @@ runs:
           echo "has-index=false" >> $GITHUB_OUTPUT
           echo "build-success=false" >> $GITHUB_OUTPUT
         fi
+      env:
+        STEP_NORMALIZE_OUTPUT_NORMALIZED: ${{ steps.normalize-output.outputs.normalized }}
 
     # ================== 📊 ==================
 
@@ -452,50 +500,72 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        cat >> $GITHUB_STEP_SUMMARY << EOF
         <details><summary>📄 DocFX Build</summary>
 
         ## 🔧 DocFX Configuration
         | Parameter | Value |
         |-----------|-------|
-        | 📄 Config File | `${{ steps.normalize-config.outputs.normalized }}` |
-        | 📁 Output Directory | `${{ steps.normalize-output.outputs.normalized }}` |
-        | 📊 Log Level | `${{ inputs.logLevel }}` |
-        | 🎨 Template | `${{ inputs.template || 'none' }}` |
-        | 🎭 Theme | `${{ inputs.theme }}` |
-        | 🔧 Max Parallelism | `${{ inputs.maxParallelism }}` |
-        | 🐛 Debug Mode | `${{ inputs.debug }}` |
-        | 🧪 Dry Run | `${{ inputs.dryRun }}` |
-        | ⚠️ Warnings as Errors | `${{ inputs.warningsAsErrors }}` |
-        | 📝 Verbose Logging | `${{ inputs.verbose }}` |
+        | 📄 Config File | \`${STEP_NORMALIZE_CONFIG_NORMALIZED}\` |
+        | 📁 Output Directory | \`${STEP_NORMALIZE_OUTPUT_NORMALIZED}\` |
+        | 📊 Log Level | \`${INPUT_LOGLEVEL}\` |
+        | 🎨 Template | \`${INPUT_TEMPLATE}\` |
+        | 🎭 Theme | \`${INPUT_THEME}\` |
+        | 🔧 Max Parallelism | \`${INPUT_MAXPARALLELISM}\` |
+        | 🐛 Debug Mode | \`${INPUT_DEBUG}\` |
+        | 🧪 Dry Run | \`${INPUT_DRYRUN}\` |
+        | ⚠️ Warnings as Errors | \`${INPUT_WARNINGSASERRORS}\` |
+        | 📝 Verbose Logging | \`${INPUT_VERBOSE}\` |
 
         ## 📊 Export Settings
         | Setting | Value |
         |---------|-------|
-        | 🔍 Export Raw Model | `${{ inputs.exportRawModel }}` |
-        | 📄 Export View Model | `${{ inputs.exportViewModel }}` |
-        | 🚫 Disable Git Features | `${{ inputs.disableGitFeatures }}` |
+        | 🔍 Export Raw Model | \`${INPUT_EXPORTRAWMODEL}\` |
+        | 📄 Export View Model | \`${INPUT_EXPORTVIEWMODEL}\` |
+        | 🚫 Disable Git Features | \`${INPUT_DISABLEGITFEATURES}\` |
 
         ## ⚙️ Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 📦 Tool Installation | `✅ Completed` |
-        | 🔧 Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 📚 Documentation Generation | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🔍 Build Verification | `${{ steps.verify-build.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 📦 Tool Installation | \`✅ Completed\` |
+        | 🔧 Argument Building | \`${STEP_BUILD_ARGS_OUTCOME_LABEL}\` |
+        | 📚 Documentation Generation | \`${STEP_RUN_DOTNET_OUTCOME_LABEL}\` |
+        | 🔍 Build Verification | \`${STEP_VERIFY_BUILD_OUTCOME_LABEL}\` |
 
         ## 📤 Execution Results
         | Metric | Value |
         |--------|-------|
-        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
-        | 📁 Files Generated | `${{ steps.verify-build.outputs.files-generated }}` |
-        | 🏠 Has Index Page | `${{ steps.verify-build.outputs.has-index }}` |
-        | ✅ Build Success | `${{ steps.verify-build.outputs.build-success }}` |
-        | 🚀 Executed Command | `${{ steps.run-dotnet.outputs.executed-command }}` |
+        | ✅ Exit Code | \`${STEP_RUN_DOTNET_EXIT_CODE}\` |
+        | 📁 Files Generated | \`${STEP_VERIFY_BUILD_FILES_GENERATED}\` |
+        | 🏠 Has Index Page | \`${STEP_VERIFY_BUILD_HAS_INDEX}\` |
+        | ✅ Build Success | \`${STEP_VERIFY_BUILD_BUILD_SUCCESS}\` |
+        | 🚀 Executed Command | \`${STEP_RUN_DOTNET_EXECUTED_COMMAND}\` |
 
         </details>
         EOF
+      env:
+        STEP_NORMALIZE_CONFIG_NORMALIZED: ${{ steps.normalize-config.outputs.normalized }}
+        STEP_NORMALIZE_OUTPUT_NORMALIZED: ${{ steps.normalize-output.outputs.normalized }}
+        INPUT_LOGLEVEL: ${{ inputs.logLevel }}
+        INPUT_TEMPLATE: ${{ inputs.template || 'none' }}
+        INPUT_THEME: ${{ inputs.theme }}
+        INPUT_MAXPARALLELISM: ${{ inputs.maxParallelism }}
+        INPUT_DEBUG: ${{ inputs.debug }}
+        INPUT_DRYRUN: ${{ inputs.dryRun }}
+        INPUT_WARNINGSASERRORS: ${{ inputs.warningsAsErrors }}
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+        INPUT_EXPORTRAWMODEL: ${{ inputs.exportRawModel }}
+        INPUT_EXPORTVIEWMODEL: ${{ inputs.exportViewModel }}
+        INPUT_DISABLEGITFEATURES: ${{ inputs.disableGitFeatures }}
+        STEP_BUILD_ARGS_OUTCOME_LABEL: ${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_RUN_DOTNET_OUTCOME_LABEL: ${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_VERIFY_BUILD_OUTCOME_LABEL: ${{ steps.verify-build.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_RUN_DOTNET_EXIT_CODE: ${{ steps.run-dotnet.outputs.exit-code }}
+        STEP_VERIFY_BUILD_FILES_GENERATED: ${{ steps.verify-build.outputs.files-generated }}
+        STEP_VERIFY_BUILD_HAS_INDEX: ${{ steps.verify-build.outputs.has-index }}
+        STEP_VERIFY_BUILD_BUILD_SUCCESS: ${{ steps.verify-build.outputs.build-success }}
+        STEP_RUN_DOTNET_EXECUTED_COMMAND: ${{ steps.run-dotnet.outputs.executed-command }}
 
 branding:
   icon: "book-open"

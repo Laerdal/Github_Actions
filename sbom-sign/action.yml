@@ -75,11 +75,13 @@ runs:
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        if [ -n "${{ inputs.signing-key }}" ]; then
-          echo "::add-mask::${{ inputs.signing-key }}"
+        if [ -n "${INPUT_SIGNING_KEY}" ]; then
+          echo "::add-mask::${INPUT_SIGNING_KEY}"
         fi
 
         echo "::debug::Masked sensitive inputs"
+      env:
+        INPUT_SIGNING_KEY: ${{ inputs.signing-key }}
 
     # ================== 📁 ==================
 
@@ -111,8 +113,8 @@ runs:
 
         for param in sbom-file-path signing-key; do
           case $param in
-            sbom-file-path) value="${{ inputs.sbom-file-path }}" ;;
-            signing-key) value="${{ inputs.signing-key }}" ;;
+            sbom-file-path) value="${INPUT_SBOM_FILE_PATH}" ;;
+            signing-key) value="${INPUT_SIGNING_KEY}" ;;
           esac
           if [ -z "$value" ]; then
             echo "::error::Parameter $param is required but was not provided."
@@ -126,55 +128,66 @@ runs:
         fi
 
         echo "✅ Required input validation passed"
+      env:
+        INPUT_SBOM_FILE_PATH: ${{ inputs.sbom-file-path }}
+        INPUT_SIGNING_KEY: ${{ inputs.signing-key }}
 
     - name: "✅ Validate input : booleans"
       shell: bash
       run: |
         echo "::debug::Validating boolean inputs..."
-        if [ -n "${{ inputs.show-summary }}" ] && [ "${{ inputs.show-summary }}" != "true" ] && [ "${{ inputs.show-summary }}" != "false" ]; then
-          echo "::error::Parameter show-summary must be 'true' or 'false', got: ${{ inputs.show-summary }}"
+        if [ -n "${INPUT_SHOW_SUMMARY}" ] && [ "${INPUT_SHOW_SUMMARY}" != "true" ] && [ "${INPUT_SHOW_SUMMARY}" != "false" ]; then
+          echo "::error::Parameter show-summary must be 'true' or 'false', got: ${INPUT_SHOW_SUMMARY}"
           exit 1
         fi
 
         echo "✅ Boolean inputs validation completed successfully"
+      env:
+        INPUT_SHOW_SUMMARY: ${{ inputs.show-summary }}
 
     - name: "✅ Validate input : installation-method"
       shell: bash
       run: |
-        echo "::debug::Validating installation method: ${{ inputs.installation-method }}"
+        echo "::debug::Validating installation method: ${INPUT_INSTALLATION_METHOD}"
 
-        case "${{ inputs.installation-method }}" in
+        case "${INPUT_INSTALLATION_METHOD}" in
           docker|brew|skip)
-            echo "✅ Installation method: ${{ inputs.installation-method }}"
+            echo "✅ Installation method: ${INPUT_INSTALLATION_METHOD}"
             ;;
           *)
-            echo "::error::Invalid installation method '${{ inputs.installation-method }}'. Supported methods: docker, brew, skip"
+            echo "::error::Invalid installation method '${INPUT_INSTALLATION_METHOD}'. Supported methods: docker, brew, skip"
             exit 1
             ;;
         esac
+      env:
+        INPUT_INSTALLATION_METHOD: ${{ inputs.installation-method }}
 
     - name: "✅ Validate input : sbom-file-path"
       shell: bash
       run: |
-        echo "::debug::Validating SBOM file: ${{ steps.normalize-sbom-file.outputs.normalized }}"
+        echo "::debug::Validating SBOM file: ${STEP_NORMALIZE_SBOM_FILE_NORMALIZED}"
 
-        if [ ! -f "${{ steps.normalize-sbom-file.outputs.normalized }}" ]; then
-          echo "::error file=${{ steps.normalize-sbom-file.outputs.normalized }}::SBOM file not found at: ${{ steps.normalize-sbom-file.outputs.normalized }}"
+        if [ ! -f "${STEP_NORMALIZE_SBOM_FILE_NORMALIZED}" ]; then
+          echo "::error file=${STEP_NORMALIZE_SBOM_FILE_NORMALIZED}::SBOM file not found at: ${STEP_NORMALIZE_SBOM_FILE_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ SBOM file validation passed"
+      env:
+        STEP_NORMALIZE_SBOM_FILE_NORMALIZED: ${{ steps.normalize-sbom-file.outputs.normalized }}
 
     - name: "✅ Validate input : signing-key format"
       shell: bash
       run: |
         echo "::debug::Validating signing key format..."
 
-        if [[ "${{ inputs.signing-key }}" != *"BEGIN"*"PRIVATE KEY"* ]]; then
+        if [[ "${INPUT_SIGNING_KEY}" != *"BEGIN"*"PRIVATE KEY"* ]]; then
           echo "::warning::Signing key doesn't appear to be in PEM format"
         fi
 
         echo "✅ Signing key format check completed"
+      env:
+        INPUT_SIGNING_KEY: ${{ inputs.signing-key }}
 
     # ================== 🚀 ==================
 
@@ -183,9 +196,9 @@ runs:
       id: install
       shell: bash
       run: |
-        echo "🔧 Installing CycloneDX CLI using method: ${{ inputs.installation-method }}"
+        echo "🔧 Installing CycloneDX CLI using method: ${INPUT_INSTALLATION_METHOD}"
 
-        case "${{ inputs.installation-method }}" in
+        case "${INPUT_INSTALLATION_METHOD}" in
           "docker")
             echo "🐳 Using Docker method..."
 
@@ -194,7 +207,7 @@ runs:
               exit 1
             fi
 
-            docker_image="cyclonedx/cyclonedx-cli:${{ inputs.cyclonedx-cli-version }}"
+            docker_image="cyclonedx/cyclonedx-cli:${INPUT_CYCLONEDX_CLI_VERSION}"
             echo "📥 Pulling Docker image: $docker_image"
 
             if ! docker pull "$docker_image"; then
@@ -227,7 +240,7 @@ runs:
         echo "cyclonedx-command=$cyclonedx_cmd" >> $GITHUB_OUTPUT
 
         # Verify installation using the local variable computed above. Note: we can NOT use
-        # `${{ steps.install.outputs.cyclonedx-command }}` here because expressions are resolved
+        # `steps.install.outputs.cyclonedx-command` here because expressions are resolved
         # before this script runs, so a step's own outputs are only visible to *later* steps.
         echo "🔍 Verifying CycloneDX CLI installation..."
         if eval "$cyclonedx_cmd --version" >/dev/null 2>&1; then
@@ -235,20 +248,23 @@ runs:
         else
           echo "::warning::Could not verify installation, but proceeding anyway"
         fi
+      env:
+        INPUT_INSTALLATION_METHOD: ${{ inputs.installation-method }}
+        INPUT_CYCLONEDX_CLI_VERSION: ${{ inputs.cyclonedx-cli-version }}
 
     - name: "🔐 Prepare signing key"
       if: success()
       id: prepare-key
       shell: bash
       run: |
-        key_file="${{ steps.normalize-signing-key-path.outputs.normalized }}"
+        key_file="${STEP_NORMALIZE_SIGNING_KEY_PATH_NORMALIZED}"
         echo "🔐 Preparing signing key with security measures..."
         echo "📍 Key file location: $key_file"
 
         mkdir -p "$(dirname "$key_file")"
 
         # Write the signing key to file with secure handling
-        echo "${{ inputs.signing-key }}" > "$key_file"
+        echo "${INPUT_SIGNING_KEY}" > "$key_file"
 
         # Set restrictive permissions (owner read/write only)
         chmod 600 "$key_file"
@@ -269,6 +285,9 @@ runs:
         echo "🔒 Permissions: 600 (owner only)"
 
         echo "key-file=$key_file" >> $GITHUB_OUTPUT
+      env:
+        STEP_NORMALIZE_SIGNING_KEY_PATH_NORMALIZED: ${{ steps.normalize-signing-key-path.outputs.normalized }}
+        INPUT_SIGNING_KEY: ${{ inputs.signing-key }}
 
     - name: "🔒 Execute SBOM signing"
       if: success()
@@ -277,12 +296,12 @@ runs:
       run: |
         echo "🔒 Starting SBOM signing process..."
 
-        sbom_file="${{ steps.normalize-sbom-file.outputs.normalized }}"
-        key_file="${{ steps.prepare-key.outputs.key-file }}"
+        sbom_file="${STEP_NORMALIZE_SBOM_FILE_NORMALIZED}"
+        key_file="${STEP_PREPARE_KEY_KEY_FILE}"
 
         # Determine output path
-        if [ -n "${{ inputs.output-path }}" ]; then
-          output_file="${{ steps.normalize-output-path.outputs.normalized }}"
+        if [ -n "${INPUT_OUTPUT_PATH}" ]; then
+          output_file="${STEP_NORMALIZE_OUTPUT_PATH_NORMALIZED}"
           echo "📄 Output will be saved to: $output_file"
 
           if [ "$sbom_file" != "$output_file" ]; then
@@ -297,17 +316,17 @@ runs:
         fi
 
         echo "🔒 Signing configuration:"
-        echo "  Input SBOM: ${{ steps.normalize-sbom-file.outputs.normalized }}"
+        echo "  Input SBOM: ${STEP_NORMALIZE_SBOM_FILE_NORMALIZED}"
         echo "  Working file: $sbom_file"
         echo "  Key file: $key_file"
         echo "  Final output: $output_file"
 
         # Determine CycloneDX command (matches the method chosen during installation)
-        if [ "${{ inputs.installation-method }}" = "skip" ]; then
+        if [ "${INPUT_INSTALLATION_METHOD}" = "skip" ]; then
           cyclonedx_cmd="cyclonedx"
           echo "🔧 Using system-installed CycloneDX CLI"
         else
-          cyclonedx_cmd="${{ steps.install.outputs.cyclonedx-command }}"
+          cyclonedx_cmd="${STEP_INSTALL_CYCLONEDX_COMMAND}"
           echo "🔧 Using installed CycloneDX CLI: $cyclonedx_cmd"
         fi
 
@@ -345,6 +364,13 @@ runs:
         echo "timestamp=$timestamp" >> $GITHUB_OUTPUT
         echo "file-size=$file_size" >> $GITHUB_OUTPUT
         echo "cli-version=$cli_version" >> $GITHUB_OUTPUT
+      env:
+        STEP_NORMALIZE_SBOM_FILE_NORMALIZED: ${{ steps.normalize-sbom-file.outputs.normalized }}
+        STEP_PREPARE_KEY_KEY_FILE: ${{ steps.prepare-key.outputs.key-file }}
+        INPUT_OUTPUT_PATH: ${{ inputs.output-path }}
+        STEP_NORMALIZE_OUTPUT_PATH_NORMALIZED: ${{ steps.normalize-output-path.outputs.normalized }}
+        INPUT_INSTALLATION_METHOD: ${{ inputs.installation-method }}
+        STEP_INSTALL_CYCLONEDX_COMMAND: ${{ steps.install.outputs.cyclonedx-command }}
 
     # ================== 🔍 ==================
 
@@ -355,7 +381,7 @@ runs:
         echo "🧹 Starting cleanup and verification..."
 
         # Always cleanup signing key for security
-        key_file="${{ steps.prepare-key.outputs.key-file }}"
+        key_file="${STEP_PREPARE_KEY_KEY_FILE}"
         if [ -f "$key_file" ]; then
           echo "🔐 Removing temporary signing key file: $key_file"
           rm -f "$key_file"
@@ -363,8 +389,8 @@ runs:
         fi
 
         # Verify signature if signing was successful
-        if [ "${{ steps.sign.outcome }}" = "success" ]; then
-          signed_file="${{ steps.sign.outputs.signed-sbom-path }}"
+        if [ "${STEP_SIGN_OUTCOME}" = "success" ]; then
+          signed_file="${STEP_SIGN_SIGNED_SBOM_PATH}"
           echo "🔍 Verifying signed SBOM structure: $signed_file"
 
           # Basic verification that the file contains signature elements
@@ -386,6 +412,10 @@ runs:
         fi
 
         echo "✅ Cleanup and verification completed"
+      env:
+        STEP_PREPARE_KEY_KEY_FILE: ${{ steps.prepare-key.outputs.key-file }}
+        STEP_SIGN_OUTCOME: ${{ steps.sign.outcome }}
+        STEP_SIGN_SIGNED_SBOM_PATH: ${{ steps.sign.outputs.signed-sbom-path }}
 
     # ================== 📊 ==================
 
@@ -393,49 +423,63 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        cat >> $GITHUB_STEP_SUMMARY << EOF
         <details><summary>Expand for details - 📊 SBOM Sign Summary</summary>
 
         ## 🔧 Configuration
         | Parameter | Value |
         |-----------|-------|
-        | 📄 **Input SBOM** | `${{ steps.normalize-sbom-file.outputs.normalized }}` |
-        | 📄 **Output Path** | `${{ inputs.output-path || 'In-place signing' }}` |
-        | 🔧 **Installation Method** | `${{ inputs.installation-method }}` |
-        | 🏷️ **CycloneDX Version** | `${{ inputs.cyclonedx-cli-version }}` |
-        | 🔐 **Key File Path** | `${{ inputs.signing-key-file-path }}` |
+        | 📄 **Input SBOM** | \`${STEP_NORMALIZE_SBOM_FILE_NORMALIZED}\` |
+        | 📄 **Output Path** | \`${INPUT_OUTPUT_PATH}\` |
+        | 🔧 **Installation Method** | \`${INPUT_INSTALLATION_METHOD}\` |
+        | 🏷️ **CycloneDX Version** | \`${INPUT_CYCLONEDX_CLI_VERSION}\` |
+        | 🔐 **Key File Path** | \`${INPUT_SIGNING_KEY_FILE_PATH}\` |
 
         ## 📜 Signing Results
         | Metric | Value |
         |--------|-------|
-        | 📄 **Signed SBOM** | `${{ steps.sign.outputs.signed-sbom-path || 'Not created' }}` |
-        | 🔒 **Algorithm** | `RS256 (RSA with SHA-256)` |
-        | 📦 **CLI Version Used** | `${{ steps.sign.outputs.cli-version || 'Unknown' }}` |
-        | 📊 **File Size** | `${{ steps.sign.outputs.file-size || 'Unknown' }} bytes` |
-        | ⏱️ **Timestamp** | `${{ steps.sign.outputs.timestamp || 'Not completed' }}` |
-        | ✅ **Status** | `${{ steps.sign.outcome == 'success' && '✅ Success' || '❌ Failed' }}` |
+        | 📄 **Signed SBOM** | \`${STEP_SIGN_SIGNED_SBOM_PATH}\` |
+        | 🔒 **Algorithm** | \`RS256 (RSA with SHA-256)\` |
+        | 📦 **CLI Version Used** | \`${STEP_SIGN_CLI_VERSION}\` |
+        | 📊 **File Size** | \`${STEP_SIGN_FILE_SIZE} bytes\` |
+        | ⏱️ **Timestamp** | \`${STEP_SIGN_TIMESTAMP}\` |
+        | ✅ **Status** | \`${STEP_SIGN_OUTCOME_LABEL}\` |
 
         ## 🔧 Installation Details
         | Setting | Value |
         |---------|-------|
-        | 🛠️ **Method Used** | `${{ inputs.installation-method }}` |
-        | 🐳 **Docker Image** | `${{ inputs.installation-method == 'docker' && format('cyclonedx/cyclonedx-cli:{0}', inputs.cyclonedx-cli-version) || 'N/A' }}` |
-        | 🍺 **Homebrew** | `${{ inputs.installation-method == 'brew' && '✅ Used' || 'N/A' }}` |
+        | 🛠️ **Method Used** | \`${INPUT_INSTALLATION_METHOD}\` |
+        | 🐳 **Docker Image** | \`${INPUT_INSTALLATION_METHOD_LABEL}\` |
+        | 🍺 **Homebrew** | \`${INPUT_INSTALLATION_METHOD_LABEL_2}\` |
 
         ## 🔒 Security Features
         | Feature | Status |
         |---------|--------|
-        | 🔑 **Key Permissions** | `600 (owner read/write only)` |
-        | 🧹 **Auto Cleanup** | `✅ Key file securely removed` |
-        | ✅ **Post-Sign Verification** | `✅ Signature validation performed` |
-        | 🔐 **PEM Format Check** | `${{ contains(inputs.signing-key, 'PRIVATE KEY') && '✅ Valid format' || '⚠️ Check format' }}` |
+        | 🔑 **Key Permissions** | \`600 (owner read/write only)\` |
+        | 🧹 **Auto Cleanup** | \`✅ Key file securely removed\` |
+        | ✅ **Post-Sign Verification** | \`✅ Signature validation performed\` |
+        | 🔐 **PEM Format Check** | \`${INPUT_SIGNING_KEY_LABEL}\` |
 
         ---
 
-        > 💡 **Tip**: For verification, use `cyclonedx verify all <signed-sbom-file> --key-file <public-key-file>`
+        > 💡 **Tip**: For verification, use \`cyclonedx verify all <signed-sbom-file> --key-file <public-key-file>\`
 
         </details>
         EOF
+      env:
+        STEP_NORMALIZE_SBOM_FILE_NORMALIZED: ${{ steps.normalize-sbom-file.outputs.normalized }}
+        INPUT_OUTPUT_PATH: ${{ inputs.output-path || 'In-place signing' }}
+        INPUT_INSTALLATION_METHOD: ${{ inputs.installation-method }}
+        INPUT_CYCLONEDX_CLI_VERSION: ${{ inputs.cyclonedx-cli-version }}
+        INPUT_SIGNING_KEY_FILE_PATH: ${{ inputs.signing-key-file-path }}
+        STEP_SIGN_SIGNED_SBOM_PATH: ${{ steps.sign.outputs.signed-sbom-path || 'Not created' }}
+        STEP_SIGN_CLI_VERSION: ${{ steps.sign.outputs.cli-version || 'Unknown' }}
+        STEP_SIGN_FILE_SIZE: ${{ steps.sign.outputs.file-size || 'Unknown' }}
+        STEP_SIGN_TIMESTAMP: ${{ steps.sign.outputs.timestamp || 'Not completed' }}
+        STEP_SIGN_OUTCOME_LABEL: ${{ steps.sign.outcome == 'success' && '✅ Success' || '❌ Failed' }}
+        INPUT_INSTALLATION_METHOD_LABEL: ${{ inputs.installation-method == 'docker' && format('cyclonedx/cyclonedx-cli:{0}', inputs.cyclonedx-cli-version) || 'N/A' }}
+        INPUT_INSTALLATION_METHOD_LABEL_2: ${{ inputs.installation-method == 'brew' && '✅ Used' || 'N/A' }}
+        INPUT_SIGNING_KEY_LABEL: ${{ contains(inputs.signing-key, 'PRIVATE KEY') && '✅ Valid format' || '⚠️ Check format' }}
 
 branding:
   icon: "shield"

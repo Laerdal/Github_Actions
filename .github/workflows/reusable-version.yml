@@ -199,19 +199,28 @@ jobs:
         shell: bash
         run: |
           echo "::group::📊 Generated Version Information"
-          echo "🎯 Core Version: ${{ steps.version.outputs.VERSION_CORE }}"
-          echo "🔗 Full Version: ${{ steps.version.outputs.VERSION_FULL }}"
-          echo "📚 Assembly Version: ${{ steps.version.outputs.VERSION_ASSEMBLY }}"
-          echo "🏷️ For Tag: ${{ steps.version.outputs.VERSION_FORTAG }}"
-          echo "🌿 Branch: ${{ steps.version.outputs.VERSION_BRANCHNAME }}"
-          echo "🚧 Is Prerelease: ${{ steps.version.outputs.VERSION_ISPRERELEASE }}"
-          echo "🏷️ Tag Exists: ${{ steps.version.outputs.VERSION_TAG_EXISTS }}"
+          echo "🎯 Core Version: ${STEP_VERSION_VERSION_CORE}"
+          echo "🔗 Full Version: ${STEP_VERSION_VERSION_FULL}"
+          echo "📚 Assembly Version: ${STEP_VERSION_VERSION_ASSEMBLY}"
+          echo "🏷️ For Tag: ${STEP_VERSION_VERSION_FORTAG}"
+          echo "🌿 Branch: ${STEP_VERSION_VERSION_BRANCHNAME}"
+          echo "🚧 Is Prerelease: ${STEP_VERSION_VERSION_ISPRERELEASE}"
+          echo "🏷️ Tag Exists: ${STEP_VERSION_VERSION_TAG_EXISTS}"
 
-          if [ "${{ steps.version.outputs.VERSION_LATEST_TAG }}" != "" ]; then
-            echo "📋 Latest Tag: ${{ steps.version.outputs.VERSION_LATEST_TAG }}"
+          if [ "${STEP_VERSION_VERSION_LATEST_TAG}" != "" ]; then
+            echo "📋 Latest Tag: ${STEP_VERSION_VERSION_LATEST_TAG}"
           fi
 
           echo "::endgroup::"
+        env:
+          STEP_VERSION_VERSION_CORE: ${{ steps.version.outputs.VERSION_CORE }}
+          STEP_VERSION_VERSION_FULL: ${{ steps.version.outputs.VERSION_FULL }}
+          STEP_VERSION_VERSION_ASSEMBLY: ${{ steps.version.outputs.VERSION_ASSEMBLY }}
+          STEP_VERSION_VERSION_FORTAG: ${{ steps.version.outputs.VERSION_FORTAG }}
+          STEP_VERSION_VERSION_BRANCHNAME: ${{ steps.version.outputs.VERSION_BRANCHNAME }}
+          STEP_VERSION_VERSION_ISPRERELEASE: ${{ steps.version.outputs.VERSION_ISPRERELEASE }}
+          STEP_VERSION_VERSION_TAG_EXISTS: ${{ steps.version.outputs.VERSION_TAG_EXISTS }}
+          STEP_VERSION_VERSION_LATEST_TAG: ${{ steps.version.outputs.VERSION_LATEST_TAG }}
 
       - name: "📤 Upload version artifacts"
         if: ${{ inputs.upload-artifacts && !inputs.dry-run }}

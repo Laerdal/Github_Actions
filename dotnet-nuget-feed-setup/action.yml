@@ -79,11 +79,13 @@ runs:
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        if [ -n "${{ inputs.password }}" ]; then
-          echo "::add-mask::${{ inputs.password }}"
+        if [ -n "${INPUT_PASSWORD}" ]; then
+          echo "::add-mask::${INPUT_PASSWORD}"
         fi
 
         echo "✅ Masked sensitive inputs"
+      env:
+        INPUT_PASSWORD: ${{ inputs.password }}
 
     # ================== 📁 ==================
 
@@ -100,10 +102,10 @@ runs:
       shell: bash
       run: |
         echo "::debug::Validating boolean inputs"
-        if [ -n "${{ inputs.store-password-in-clear-text }}" ]; then
-          case "${{ inputs.store-password-in-clear-text }}" in
-            true|false) echo "store-password-in-clear-text=${{ inputs.store-password-in-clear-text }}" >> $GITHUB_OUTPUT;;
-            *) echo "::error::Parameter store-password-in-clear-text must be 'true' or 'false', got: ${{ inputs.store-password-in-clear-text }}"; exit 1 ;;
+        if [ -n "${INPUT_STORE_PASSWORD_IN_CLEAR_TEXT}" ]; then
+          case "${INPUT_STORE_PASSWORD_IN_CLEAR_TEXT}" in
+            true|false) echo "store-password-in-clear-text=${INPUT_STORE_PASSWORD_IN_CLEAR_TEXT}" >> $GITHUB_OUTPUT;;
+            *) echo "::error::Parameter store-password-in-clear-text must be 'true' or 'false', got: ${INPUT_STORE_PASSWORD_IN_CLEAR_TEXT}"; exit 1 ;;
           esac
         else
           # Default based on OS
@@ -117,31 +119,38 @@ runs:
         fi
 
         echo "✅ Boolean inputs validation completed successfully"
+      env:
+        INPUT_STORE_PASSWORD_IN_CLEAR_TEXT: ${{ inputs.store-password-in-clear-text }}
 
     - name: "✅ Validate input : name"
       shell: bash
       run: |
-        echo "::debug::Validating name input: ${{ inputs.name }}"
+        echo "::debug::Validating name input: ${INPUT_NAME}"
 
-        if [ -z "${{ inputs.name }}" ]; then
+        if [ -z "${INPUT_NAME}" ]; then
           echo "::error::Name cannot be empty"
           exit 1
         fi
 
         echo "✅ Name validation completed successfully"
+      env:
+        INPUT_NAME: ${{ inputs.name }}
 
     - name: "✅ Validate input : username"
       if: ${{ inputs.username != '' || inputs.password != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating username input: ${{ inputs.username }}"
+        echo "::debug::Validating username input: ${INPUT_USERNAME}"
 
-        if [ -z "${{ inputs.username }}" ] && [ -n "${{ inputs.password }}" ]; then
+        if [ -z "${INPUT_USERNAME}" ] && [ -n "${INPUT_PASSWORD}" ]; then
           echo "::error::Username must be provided when password is specified"
           exit 1
         fi
 
         echo "✅ Username validation completed successfully"
+      env:
+        INPUT_USERNAME: ${{ inputs.username }}
+        INPUT_PASSWORD: ${{ inputs.password }}
 
     - name: "✅ Validate input : password"
       if: ${{ inputs.password != '' || inputs.username != '' }}
@@ -150,65 +159,74 @@ runs:
         echo "::debug::Validating password input"
 
         # Validate authentication combination
-        if [ -n "${{ inputs.username }}" ] && [ -z "${{ inputs.password }}" ]; then
+        if [ -n "${INPUT_USERNAME}" ] && [ -z "${INPUT_PASSWORD}" ]; then
           echo "::error::Password must be provided when username is specified"
           exit 1
         fi
 
         echo "✅ Password validation completed successfully"
+      env:
+        INPUT_USERNAME: ${{ inputs.username }}
+        INPUT_PASSWORD: ${{ inputs.password }}
 
     - name: "✅ Validate input : source"
       shell: bash
       run: |
-        echo "::debug::Validating source input: ${{ inputs.source }}"
+        echo "::debug::Validating source input: ${INPUT_SOURCE}"
 
-        if [ -z "${{ inputs.source }}" ]; then
+        if [ -z "${INPUT_SOURCE}" ]; then
           echo "::error::Source URL cannot be empty"
           exit 1
         fi
 
         # Validate source URL format
-        if [[ ! "${{ inputs.source }}" =~ ^https?:// ]]; then
-          echo "::error::Source URL must start with http:// or https://: ${{ inputs.source }}"
+        if [[ ! "${INPUT_SOURCE}" =~ ^https?:// ]]; then
+          echo "::error::Source URL must start with http:// or https://: ${INPUT_SOURCE}"
           exit 1
         fi
 
         echo "✅ Source validation completed successfully"
+      env:
+        INPUT_SOURCE: ${{ inputs.source }}
 
     - name: "✅ Validate input : configfile"
       if: ${{ inputs.configfile != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating configfile input: ${{ steps.normalize-configfile.outputs.normalized }}"
+        echo "::debug::Validating configfile input: ${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}"
 
-        if [ ! -f "${{ steps.normalize-configfile.outputs.normalized }}" ]; then
-          echo "::error file=${{ steps.normalize-configfile.outputs.normalized }}::NuGet configuration file not found: ${{ steps.normalize-configfile.outputs.normalized }}"
+        if [ ! -f "${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}" ]; then
+          echo "::error file=${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}::NuGet configuration file not found: ${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Configfile validation completed successfully"
+      env:
+        STEP_NORMALIZE_CONFIGFILE_NORMALIZED: ${{ steps.normalize-configfile.outputs.normalized }}
 
     - name: "✅ Validate input : protocol-version"
       if: ${{ inputs.protocol-version != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating protocol-version input: ${{ inputs.protocol-version }}"
+        echo "::debug::Validating protocol-version input: ${INPUT_PROTOCOL_VERSION}"
 
-        if [ "${{ inputs.protocol-version }}" != "2" ] && [ "${{ inputs.protocol-version }}" != "3" ]; then
-          echo "::error::Protocol version must be '2' or '3', got: ${{ inputs.protocol-version }}"
+        if [ "${INPUT_PROTOCOL_VERSION}" != "2" ] && [ "${INPUT_PROTOCOL_VERSION}" != "3" ]; then
+          echo "::error::Protocol version must be '2' or '3', got: ${INPUT_PROTOCOL_VERSION}"
           exit 1
         fi
 
         echo "✅ Protocol version validation completed successfully"
+      env:
+        INPUT_PROTOCOL_VERSION: ${{ inputs.protocol-version }}
 
     - name: "✅ Validate input : valid-authentication-types"
       if: ${{ inputs.valid-authentication-types != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating valid-authentication-types input: ${{ inputs.valid-authentication-types }}"
+        echo "::debug::Validating valid-authentication-types input: ${INPUT_VALID_AUTHENTICATION_TYPES}"
 
         # Split comma-separated values and validate each
-        IFS=',' read -ra AUTH_TYPES <<< "${{ inputs.valid-authentication-types }}"
+        IFS=',' read -ra AUTH_TYPES <<< "${INPUT_VALID_AUTHENTICATION_TYPES}"
         for auth_type in "${AUTH_TYPES[@]}"; do
           # Trim whitespace
           auth_type=$(echo "$auth_type" | xargs)
@@ -219,6 +237,8 @@ runs:
         done
 
         echo "✅ Valid authentication types validation completed successfully"
+      env:
+        INPUT_VALID_AUTHENTICATION_TYPES: ${{ inputs.valid-authentication-types }}
 
     # ================== 🏗️ ==================
 
@@ -229,12 +249,12 @@ runs:
         echo "::debug::Building argument list for NuGet source configuration"
 
         # Start with base arguments
-        ARGUMENTS="add source '${{ inputs.source }}'"
+        ARGUMENTS="add source '${INPUT_SOURCE}'"
 
         # Boolean flags
         for param in store-password-in-clear-text; do
           case $param in
-            store-password-in-clear-text) value="${{ steps.validate-store-password-in-clear-text.outputs.store-password-in-clear-text }}" ;;
+            store-password-in-clear-text) value="${STEP_VALIDATE_STORE_PASSWORD_IN_CLEAR_TEXT_STORE_PASSWORD_IN_CLEAR_TEXT}" ;;
           esac
           if [ "$value" = "true" ]; then
             ARGUMENTS="$ARGUMENTS --${param}"
@@ -244,12 +264,12 @@ runs:
         # Key-value options
         for param in name username password valid-authentication-types configfile protocol-version; do
           case $param in
-            name) value="${{ inputs.name }}" ;;
-            username) value="${{ inputs.username }}" ;;
-            password) value="${{ inputs.password }}" ;;
-            valid-authentication-types) value="${{ inputs.valid-authentication-types }}" ;;
-            configfile) value="${{ steps.normalize-configfile.outputs.normalized }}" ;;
-            protocol-version) value="${{ inputs.protocol-version }}" ;;
+            name) value="${INPUT_NAME}" ;;
+            username) value="${INPUT_USERNAME}" ;;
+            password) value="${INPUT_PASSWORD}" ;;
+            valid-authentication-types) value="${INPUT_VALID_AUTHENTICATION_TYPES}" ;;
+            configfile) value="${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}" ;;
+            protocol-version) value="${INPUT_PROTOCOL_VERSION}" ;;
           esac
           if [ -n "$value" ]; then
             ARGUMENTS="$ARGUMENTS --$param '$value'"
@@ -261,6 +281,15 @@ runs:
 
         echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
         echo "::debug::Argument list built successfully: $ARGUMENTS"
+      env:
+        INPUT_SOURCE: ${{ inputs.source }}
+        STEP_VALIDATE_STORE_PASSWORD_IN_CLEAR_TEXT_STORE_PASSWORD_IN_CLEAR_TEXT: ${{ steps.validate-store-password-in-clear-text.outputs.store-password-in-clear-text }}
+        INPUT_NAME: ${{ inputs.name }}
+        INPUT_USERNAME: ${{ inputs.username }}
+        INPUT_PASSWORD: ${{ inputs.password }}
+        INPUT_VALID_AUTHENTICATION_TYPES: ${{ inputs.valid-authentication-types }}
+        STEP_NORMALIZE_CONFIGFILE_NORMALIZED: ${{ steps.normalize-configfile.outputs.normalized }}
+        INPUT_PROTOCOL_VERSION: ${{ inputs.protocol-version }}
 
     # ================== 🚀 ==================
 
@@ -286,24 +315,27 @@ runs:
         SOURCE_ADDED="false"
 
         # List all sources and check if our source was added
-        if [ -n "${{ steps.normalize-configfile.outputs.normalized }}" ]; then
-          SOURCES_OUTPUT=$(dotnet nuget list source --configfile "${{ steps.normalize-configfile.outputs.normalized }}" 2>/dev/null || echo "")
+        if [ -n "${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}" ]; then
+          SOURCES_OUTPUT=$(dotnet nuget list source --configfile "${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}" 2>/dev/null || echo "")
         else
           SOURCES_OUTPUT=$(dotnet nuget list source 2>/dev/null || echo "")
         fi
 
-        if echo "$SOURCES_OUTPUT" | grep -q "${{ inputs.name }}"; then
+        if echo "$SOURCES_OUTPUT" | grep -q "${INPUT_NAME}"; then
           SOURCE_ADDED="true"
-          echo "::debug::Source '${{ inputs.name }}' was successfully added"
+          echo "::debug::Source '${INPUT_NAME}' was successfully added"
 
           # Show the added source details (without sensitive info)
           echo "::debug::Source details:"
-          echo "$SOURCES_OUTPUT" | grep -A 1 "${{ inputs.name }}" || true
+          echo "$SOURCES_OUTPUT" | grep -A 1 "${INPUT_NAME}" || true
         else
-          echo "::warning::Could not verify that source '${{ inputs.name }}' was added"
+          echo "::warning::Could not verify that source '${INPUT_NAME}' was added"
         fi
 
         echo "source-added=$SOURCE_ADDED" >> $GITHUB_OUTPUT
+      env:
+        STEP_NORMALIZE_CONFIGFILE_NORMALIZED: ${{ steps.normalize-configfile.outputs.normalized }}
+        INPUT_NAME: ${{ inputs.name }}
 
     # ================== 📊 ==================
 
@@ -311,38 +343,53 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>📦 NuGet Add Source : ${{ inputs.name }}</summary>
+        cat >> $GITHUB_STEP_SUMMARY << EOF
+        <details><summary>📦 NuGet Add Source : ${INPUT_NAME}</summary>
 
         ## 🔧 NuGet Source Specific Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 🔗 Source Name | `${{ inputs.name }}` |
-        | 🌐 Source URL | `${{ inputs.source }}` |
-        | 👤 Username | `${{ inputs.username != '' && inputs.username || 'not provided' }}` |
-        | 🔑 Password | `${{ inputs.password != '' && '***configured***' || 'not provided' }}` |
-        | 🔐 Store Password in Clear Text | `${{ inputs.store-password-in-clear-text }}` |
-        | 🔐 Valid Auth Types | `${{ inputs.valid-authentication-types || 'default' }}` |
-        | ⚙️ Config File | `${{ steps.normalize-configfile.outputs.normalized || 'default' }}` |
-        | 📜 Protocol Version | `${{ inputs.protocol-version || 'default' }}` |
+        | 🔗 Source Name | \`${INPUT_NAME}\` |
+        | 🌐 Source URL | \`${INPUT_SOURCE}\` |
+        | 👤 Username | \`${INPUT_USERNAME_LABEL}\` |
+        | 🔑 Password | \`${INPUT_PASSWORD_LABEL}\` |
+        | 🔐 Store Password in Clear Text | \`${INPUT_STORE_PASSWORD_IN_CLEAR_TEXT}\` |
+        | 🔐 Valid Auth Types | \`${INPUT_VALID_AUTHENTICATION_TYPES}\` |
+        | ⚙️ Config File | \`${STEP_NORMALIZE_CONFIGFILE_NORMALIZED}\` |
+        | 📜 Protocol Version | \`${INPUT_PROTOCOL_VERSION}\` |
 
         ## ⚙️ Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | ⚙️ Base Action Execution | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🔍 Source Verification | `${{ steps.verify-source.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 🏗️ Argument Building | \`${STEP_BUILD_ARGS_OUTCOME_LABEL}\` |
+        | ⚙️ Base Action Execution | \`${STEP_RUN_DOTNET_OUTCOME_LABEL}\` |
+        | 🔍 Source Verification | \`${STEP_VERIFY_SOURCE_OUTCOME_LABEL}\` |
 
         ## 📤 Execution Results
         | Metric | Value |
         |--------|-------|
-        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
-        | 🔗 Source Added | `${{ steps.verify-source.outputs.source-added }}` |
-        | 🔄 Executed Command | `${{ steps.run-dotnet.outputs.executed-command }}` |
+        | ✅ Exit Code | \`${STEP_RUN_DOTNET_EXIT_CODE}\` |
+        | 🔗 Source Added | \`${STEP_VERIFY_SOURCE_SOURCE_ADDED}\` |
+        | 🔄 Executed Command | \`${STEP_RUN_DOTNET_EXECUTED_COMMAND}\` |
 
         </details>
         EOF
+      env:
+        INPUT_NAME: ${{ inputs.name }}
+        INPUT_SOURCE: ${{ inputs.source }}
+        INPUT_USERNAME_LABEL: ${{ inputs.username != '' && inputs.username || 'not provided' }}
+        INPUT_PASSWORD_LABEL: ${{ inputs.password != '' && '***configured***' || 'not provided' }}
+        INPUT_STORE_PASSWORD_IN_CLEAR_TEXT: ${{ inputs.store-password-in-clear-text }}
+        INPUT_VALID_AUTHENTICATION_TYPES: ${{ inputs.valid-authentication-types || 'default' }}
+        STEP_NORMALIZE_CONFIGFILE_NORMALIZED: ${{ steps.normalize-configfile.outputs.normalized || 'default' }}
+        INPUT_PROTOCOL_VERSION: ${{ inputs.protocol-version || 'default' }}
+        STEP_BUILD_ARGS_OUTCOME_LABEL: ${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_RUN_DOTNET_OUTCOME_LABEL: ${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_VERIFY_SOURCE_OUTCOME_LABEL: ${{ steps.verify-source.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_RUN_DOTNET_EXIT_CODE: ${{ steps.run-dotnet.outputs.exit-code }}
+        STEP_VERIFY_SOURCE_SOURCE_ADDED: ${{ steps.verify-source.outputs.source-added }}
+        STEP_RUN_DOTNET_EXECUTED_COMMAND: ${{ steps.run-dotnet.outputs.executed-command }}
 
 branding:
   icon: "link"

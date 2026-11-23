@@ -131,32 +131,37 @@ runs:
     - name: "✅ Validate input : working-directory"
       shell: bash
       run: |
-        echo "::debug::Validating working-directory input: ${{ steps.normalize-working-directory.outputs.normalized }}"
+        echo "::debug::Validating working-directory input: ${STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED}"
 
-        if [ -z "${{ steps.normalize-working-directory.outputs.normalized }}" ]; then
+        if [ -z "${STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED}" ]; then
           echo "::error::Working directory input is required"
           exit 1
         fi
 
-        if [ "${{ steps.normalize-working-directory.outputs.exists }}" != "true" ]; then
-          echo "::error file=${{ steps.normalize-working-directory.outputs.normalized }}::Working directory does not exist or is not a directory: ${{ steps.normalize-working-directory.outputs.normalized }}"
+        if [ "${STEP_NORMALIZE_WORKING_DIRECTORY_EXISTS}" != "true" ]; then
+          echo "::error file=${STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED}::Working directory does not exist or is not a directory: ${STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Working directory validation completed successfully"
+      env:
+        STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED: ${{ steps.normalize-working-directory.outputs.normalized }}
+        STEP_NORMALIZE_WORKING_DIRECTORY_EXISTS: ${{ steps.normalize-working-directory.outputs.exists }}
 
     - name: "✅ Validate input : path"
       if: ${{ inputs.path != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating path input: ${{ steps.normalize-path.outputs.exists }}"
+        echo "::debug::Validating path input: ${STEP_NORMALIZE_PATH_EXISTS}"
 
-        if [ "${{ steps.normalize-path.outputs.exists }}" != "true" ]; then
-          echo "::error file=${{ steps.normalize-path.outputs.exists }}::Specified path does not exist: ${{ steps.normalize-path.outputs.exists }}"
+        if [ "${STEP_NORMALIZE_PATH_EXISTS}" != "true" ]; then
+          echo "::error file=${STEP_NORMALIZE_PATH_EXISTS}::Specified path does not exist: ${STEP_NORMALIZE_PATH_EXISTS}"
           exit 1
         fi
 
         echo "✅ Path validation completed successfully"
+      env:
+        STEP_NORMALIZE_PATH_EXISTS: ${{ steps.normalize-path.outputs.exists }}
 
     - name: "✅ Validate input : booleans"
       shell: bash
@@ -164,9 +169,9 @@ runs:
         echo "::debug::Validating boolean inputs..."
         for param in nologo no-restore no-build; do
           case $param in
-            nologo) value="${{ inputs.nologo }}" ;;
-            no-restore) value="${{ inputs.no-restore }}" ;;
-            no-build) value="${{ inputs.no-build }}" ;;
+            nologo) value="${INPUT_NOLOGO}" ;;
+            no-restore) value="${INPUT_NO_RESTORE}" ;;
+            no-build) value="${INPUT_NO_BUILD}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -175,80 +180,96 @@ runs:
         done
 
         echo "✅ Boolean inputs validation completed successfully"
+      env:
+        INPUT_NOLOGO: ${{ inputs.nologo }}
+        INPUT_NO_RESTORE: ${{ inputs.no-restore }}
+        INPUT_NO_BUILD: ${{ inputs.no-build }}
 
     - name: "✅ Validate input : command"
       shell: bash
       run: |
-        echo "::debug::Validating command input: ${{ inputs.command }}"
+        echo "::debug::Validating command input: ${INPUT_COMMAND}"
 
-        if [ -z "${{ inputs.command }}" ]; then
+        if [ -z "${INPUT_COMMAND}" ]; then
           echo "::error::Command input is required"
           exit 1
         fi
 
         echo "✅ Command validation completed successfully"
+      env:
+        INPUT_COMMAND: ${{ inputs.command }}
 
     - name: "✅ Validate input : verbosity"
       if: ${{ inputs.verbosity != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating verbosity input: ${{ inputs.verbosity }}"
+        echo "::debug::Validating verbosity input: ${INPUT_VERBOSITY}"
 
-        case "${{ inputs.verbosity }}" in
+        case "${INPUT_VERBOSITY}" in
           quiet|minimal|normal|detailed|diagnostic) ;;
-          *) echo "::error::Invalid verbosity level: ${{ inputs.verbosity }}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
+          *) echo "::error::Invalid verbosity level: ${INPUT_VERBOSITY}. Must be one of: quiet, minimal, normal, detailed, diagnostic"; exit 1 ;;
         esac
 
         echo "✅ Verbosity validation completed successfully"
+      env:
+        INPUT_VERBOSITY: ${{ inputs.verbosity }}
 
     - name: "✅ Validate input : configuration"
       if: ${{ inputs.configuration != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating configuration input: ${{ inputs.configuration }}"
+        echo "::debug::Validating configuration input: ${INPUT_CONFIGURATION}"
 
-        case "${{ inputs.configuration }}" in
+        case "${INPUT_CONFIGURATION}" in
           Debug|Release|MinSizeRel|RelWithDebInfo) ;;
-          *) echo "::warning::Unusual configuration value: ${{ inputs.configuration }}" ;;
+          *) echo "::warning::Unusual configuration value: ${INPUT_CONFIGURATION}" ;;
         esac
 
         echo "✅ Configuration validation completed successfully"
+      env:
+        INPUT_CONFIGURATION: ${{ inputs.configuration }}
 
     - name: "✅ Validate input : framework"
       if: ${{ inputs.framework != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating framework input: ${{ inputs.framework }}"
+        echo "::debug::Validating framework input: ${INPUT_FRAMEWORK}"
 
-        if ! [[ "${{ inputs.framework }}" =~ ^(net[0-9]+\.[0-9]+|netstandard[0-9]+\.[0-9]+|netcoreapp[0-9]+\.[0-9]+|netframework[0-9]+\.[0-9]+)$ ]]; then
-          echo "::warning::Framework format may be invalid: ${{ inputs.framework }}"
+        if ! [[ "${INPUT_FRAMEWORK}" =~ ^(net[0-9]+\.[0-9]+|netstandard[0-9]+\.[0-9]+|netcoreapp[0-9]+\.[0-9]+|netframework[0-9]+\.[0-9]+)$ ]]; then
+          echo "::warning::Framework format may be invalid: ${INPUT_FRAMEWORK}"
         fi
 
         echo "✅ Framework validation completed successfully"
+      env:
+        INPUT_FRAMEWORK: ${{ inputs.framework }}
 
     - name: "✅ Validate input : runtime"
       if: ${{ inputs.runtime != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating runtime input: ${{ inputs.runtime }}"
+        echo "::debug::Validating runtime input: ${INPUT_RUNTIME}"
 
-        if ! [[ "${{ inputs.runtime }}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
-          echo "::warning::Runtime identifier format may be invalid: ${{ inputs.runtime }}"
+        if ! [[ "${INPUT_RUNTIME}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+          echo "::warning::Runtime identifier format may be invalid: ${INPUT_RUNTIME}"
         fi
 
         echo "✅ Runtime validation completed successfully"
+      env:
+        INPUT_RUNTIME: ${{ inputs.runtime }}
 
     - name: "✅ Validate input : arch"
       if: ${{ inputs.arch != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating arch input: ${{ inputs.arch }}"
+        echo "::debug::Validating arch input: ${INPUT_ARCH}"
 
-        if ! [[ "${{ inputs.arch }}" =~ ^(x86|x64|arm|arm64)$ ]]; then
-          echo "::warning::Arch format may be invalid: ${{ inputs.arch }}"
+        if ! [[ "${INPUT_ARCH}" =~ ^(x86|x64|arm|arm64)$ ]]; then
+          echo "::warning::Arch format may be invalid: ${INPUT_ARCH}"
         fi
 
         echo "✅ Arch validation completed successfully"
+      env:
+        INPUT_ARCH: ${{ inputs.arch }}
 
     # ================== 🏗️ ==================
 
@@ -256,13 +277,15 @@ runs:
       id: validate-verbosity
       shell: bash
       run: |
-        if [ -n "${{ inputs.verbosity }}" ]; then
-          echo "verbosity=${{ inputs.verbosity }}" >> $GITHUB_OUTPUT
+        if [ -n "${INPUT_VERBOSITY}" ]; then
+          echo "verbosity=${INPUT_VERBOSITY}" >> $GITHUB_OUTPUT
         elif [ "$RUNNER_DEBUG" == "true" ] || [ "$ACTIONS_STEP_DEBUG" == "true" ]; then
           echo "verbosity=diagnostic" >> $GITHUB_OUTPUT
         else
           echo "verbosity=minimal" >> $GITHUB_OUTPUT
         fi
+      env:
+        INPUT_VERBOSITY: ${{ inputs.verbosity }}
 
     - name: "🏗️ Build argument list"
       id: build-args
@@ -275,7 +298,7 @@ runs:
         # Bash 3.2 (frozen pre-GPLv3), which does not support `declare -A` at all.
         supports_option() {
           local option="$1"
-          local command="${{ inputs.command }}"
+          local command="${INPUT_COMMAND}"
           local pattern=""
           case "$option" in
             verbosity)      pattern="build|restore|pack|publish|test|clean|msbuild|workload" ;;
@@ -293,16 +316,16 @@ runs:
         }
 
         # Start building arguments
-        ARGUMENTS="${{ inputs.command }}"
+        ARGUMENTS="${INPUT_COMMAND}"
 
-        if [ -n "${{ inputs.path }}" ]; then
-          ARGUMENTS="$ARGUMENTS '${{ steps.normalize-path.outputs.normalized }}'"
+        if [ -n "${INPUT_PATH}" ]; then
+          ARGUMENTS="$ARGUMENTS '${STEP_NORMALIZE_PATH_NORMALIZED}'"
         fi
 
         # Add normalized arguments
-        if [ -n "${{ steps.normalize-arguments.outputs.normalized }}" ]; then
-          NORMALIZED_ARGS="${{ steps.normalize-arguments.outputs.normalized }}"
-          echo "::debug::Original arguments: ${{ inputs.arguments }}"
+        if [ -n "${STEP_NORMALIZE_ARGUMENTS_NORMALIZED}" ]; then
+          NORMALIZED_ARGS="${STEP_NORMALIZE_ARGUMENTS_NORMALIZED}"
+          echo "::debug::Original arguments: ${INPUT_ARGUMENTS}"
           echo "::debug::Normalized arguments: $NORMALIZED_ARGS"
           ARGUMENTS="$ARGUMENTS $NORMALIZED_ARGS"
         fi
@@ -310,9 +333,9 @@ runs:
         # Boolean flags
         for param in nologo no-restore no-build; do
           case $param in
-            nologo) value="${{ inputs.nologo }}" ;;
-            no-restore) value="${{ inputs.no-restore }}" ;;
-            no-build) value="${{ inputs.no-build }}" ;;
+            nologo) value="${INPUT_NOLOGO}" ;;
+            no-restore) value="${INPUT_NO_RESTORE}" ;;
+            no-build) value="${INPUT_NO_BUILD}" ;;
           esac
           if [ "$value" = "true" ] && supports_option "$param"; then
             ARGUMENTS="$ARGUMENTS --${param}"
@@ -322,13 +345,13 @@ runs:
         # Key-value options
         for param in verbosity configuration framework runtime output arch artifacts-path; do
           case $param in
-            verbosity) value="${{ steps.validate-verbosity.outputs.verbosity }}" ;;
-            configuration) value="${{ inputs.configuration }}" ;;
-            framework) value="${{ inputs.framework }}" ;;
-            runtime) value="${{ inputs.runtime }}" ;;
-            output) value="${{ steps.normalize-output.outputs.normalized }}" ;;
-            arch) value="${{ inputs.arch }}" ;;
-            artifacts-path) value="${{ steps.normalize-artifacts-path.outputs.normalized }}" ;;
+            verbosity) value="${STEP_VALIDATE_VERBOSITY_VERBOSITY}" ;;
+            configuration) value="${INPUT_CONFIGURATION}" ;;
+            framework) value="${INPUT_FRAMEWORK}" ;;
+            runtime) value="${INPUT_RUNTIME}" ;;
+            output) value="${STEP_NORMALIZE_OUTPUT_NORMALIZED}" ;;
+            arch) value="${INPUT_ARCH}" ;;
+            artifacts-path) value="${STEP_NORMALIZE_ARTIFACTS_PATH_NORMALIZED}" ;;
           esac
           if [ -n "$value" ] && supports_option "$param"; then
             ARGUMENTS="$ARGUMENTS --$param '$value'"
@@ -342,6 +365,22 @@ runs:
         echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
 
         echo "✅ Argument list built successfully: $ARGUMENTS"
+      env:
+        INPUT_COMMAND: ${{ inputs.command }}
+        INPUT_PATH: ${{ inputs.path }}
+        STEP_NORMALIZE_PATH_NORMALIZED: ${{ steps.normalize-path.outputs.normalized }}
+        STEP_NORMALIZE_ARGUMENTS_NORMALIZED: ${{ steps.normalize-arguments.outputs.normalized }}
+        INPUT_ARGUMENTS: ${{ inputs.arguments }}
+        INPUT_NOLOGO: ${{ inputs.nologo }}
+        INPUT_NO_RESTORE: ${{ inputs.no-restore }}
+        INPUT_NO_BUILD: ${{ inputs.no-build }}
+        STEP_VALIDATE_VERBOSITY_VERBOSITY: ${{ steps.validate-verbosity.outputs.verbosity }}
+        INPUT_CONFIGURATION: ${{ inputs.configuration }}
+        INPUT_FRAMEWORK: ${{ inputs.framework }}
+        INPUT_RUNTIME: ${{ inputs.runtime }}
+        STEP_NORMALIZE_OUTPUT_NORMALIZED: ${{ steps.normalize-output.outputs.normalized }}
+        INPUT_ARCH: ${{ inputs.arch }}
+        STEP_NORMALIZE_ARTIFACTS_PATH_NORMALIZED: ${{ steps.normalize-artifacts-path.outputs.normalized }}
 
     # ================== 🚀 ==================
 
@@ -350,10 +389,10 @@ runs:
       shell: bash
       working-directory: ${{ steps.normalize-working-directory.outputs.normalized }}
       run: |
-        echo "::debug::Building final command from environment: ${{ steps.build-args.outputs.arguments }}"
+        echo "::debug::Building final command from environment: ${STEP_BUILD_ARGS_ARGUMENTS}"
 
         # Build the full command string
-        FULL_COMMAND="dotnet ${{ steps.build-args.outputs.arguments }}"
+        FULL_COMMAND="dotnet ${STEP_BUILD_ARGS_ARGUMENTS}"
         echo "::debug::Final command: $FULL_COMMAND"
 
         # Execute the command using eval for proper argument handling.
@@ -385,6 +424,8 @@ runs:
 
         # Exit with the same code as the dotnet command
         exit $EXIT_CODE
+      env:
+        STEP_BUILD_ARGS_ARGUMENTS: ${{ steps.build-args.outputs.arguments }}
 
     # ================== 🔍 ==================
 
@@ -395,20 +436,23 @@ runs:
         echo "::debug::Verifying command execution results..."
 
         # Check if the command executed (has exit code output)
-        if [ -z "${{ steps.run-command.outputs.exit-code }}" ]; then
+        if [ -z "${STEP_RUN_COMMAND_EXIT_CODE}" ]; then
           echo "::error::Command execution failed - no exit code available"
           exit 1
         fi
 
         # Report final status
-        EXIT_CODE="${{ steps.run-command.outputs.exit-code }}"
+        EXIT_CODE="${STEP_RUN_COMMAND_EXIT_CODE}"
         if [ "$EXIT_CODE" = "0" ]; then
-          echo "::debug::✅ .NET command '${{ inputs.command }}' completed successfully"
+          echo "::debug::✅ .NET command '${INPUT_COMMAND}' completed successfully"
         else
-          echo "::error::❌ .NET command '${{ inputs.command }}' failed with exit code $EXIT_CODE"
+          echo "::error::❌ .NET command '${INPUT_COMMAND}' failed with exit code $EXIT_CODE"
         fi
 
         echo "✅ Command execution verification completed"
+      env:
+        STEP_RUN_COMMAND_EXIT_CODE: ${{ steps.run-command.outputs.exit-code }}
+        INPUT_COMMAND: ${{ inputs.command }}
 
     # ================== 📊 ==================
 
@@ -416,43 +460,63 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>⚙️ .NET command : ${{ inputs.command }}</summary>
+        cat >> $GITHUB_STEP_SUMMARY << EOF
+        <details><summary>⚙️ .NET command : ${INPUT_COMMAND}</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 🚀 Command | `${{ inputs.command }}` |
-        | 📍 Path | `${{ steps.normalize-path.outputs.normalized || 'none' }}` |
-        | 📁 Working Directory | `${{ steps.normalize-working-directory.outputs.normalized }}` |
-        | ⚙️ Configuration | `${{ inputs.configuration }}` |
-        | 🎯 Framework | `${{ inputs.framework || 'none' }}` |
-        | 🖥️ Runtime | `${{ inputs.runtime || 'none' }}` |
-        | 🔧 Arguments | `${{ steps.normalize-arguments.outputs.normalized || 'none' }}` |
-        | 🔇 No Logo | `${{ inputs.nologo }}` |
-        | 🚫 No Restore | `${{ inputs.no-restore }}` |
-        | 🚫 No Build | `${{ inputs.no-build }}` |
-        | 📤 Output Path | `${{ steps.normalize-output.outputs.normalized || 'none' }}` |
-        | 🗂️ Artifacts Path | `${{ steps.normalize-artifacts-path.outputs.normalized || 'none' }}` |
-        | 🔊 Force Verbosity | `${{ inputs.verbosity || 'auto' }}` |
+        | 🚀 Command | \`${INPUT_COMMAND}\` |
+        | 📍 Path | \`${STEP_NORMALIZE_PATH_NORMALIZED}\` |
+        | 📁 Working Directory | \`${STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED}\` |
+        | ⚙️ Configuration | \`${INPUT_CONFIGURATION}\` |
+        | 🎯 Framework | \`${INPUT_FRAMEWORK}\` |
+        | 🖥️ Runtime | \`${INPUT_RUNTIME}\` |
+        | 🔧 Arguments | \`${STEP_NORMALIZE_ARGUMENTS_NORMALIZED}\` |
+        | 🔇 No Logo | \`${INPUT_NOLOGO}\` |
+        | 🚫 No Restore | \`${INPUT_NO_RESTORE}\` |
+        | 🚫 No Build | \`${INPUT_NO_BUILD}\` |
+        | 📤 Output Path | \`${STEP_NORMALIZE_OUTPUT_NORMALIZED}\` |
+        | 🗂️ Artifacts Path | \`${STEP_NORMALIZE_ARTIFACTS_PATH_NORMALIZED}\` |
+        | 🔊 Force Verbosity | \`${INPUT_VERBOSITY}\` |
 
         ## ⚙️ Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 🚀 Command Construction | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🔧 Compiled Arguments | `${{ steps.build-args.outputs.arguments }}` |
-        | 🚀 Command Execution | `${{ steps.run-command.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 🚀 Command Construction | \`${STEP_BUILD_ARGS_OUTCOME_LABEL}\` |
+        | 🔧 Compiled Arguments | \`${STEP_BUILD_ARGS_ARGUMENTS}\` |
+        | 🚀 Command Execution | \`${STEP_RUN_COMMAND_OUTCOME_LABEL}\` |
 
         ## 📤 Execution Results
         | Metric | Value |
         |--------|-------|
-        | ✅ Exit Code | `${{ steps.run-command.outputs.exit-code }}` |
-        | 📊 Status | `${{ steps.run-command.outcome }}` |
-        | 🚀 Executed Command | `${{ steps.run-command.outputs.executed-command }}` |
+        | ✅ Exit Code | \`${STEP_RUN_COMMAND_EXIT_CODE}\` |
+        | 📊 Status | \`${STEP_RUN_COMMAND_OUTCOME}\` |
+        | 🚀 Executed Command | \`${STEP_RUN_COMMAND_EXECUTED_COMMAND}\` |
 
         </details>
         EOF
+      env:
+        INPUT_COMMAND: ${{ inputs.command }}
+        STEP_NORMALIZE_PATH_NORMALIZED: ${{ steps.normalize-path.outputs.normalized || 'none' }}
+        STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED: ${{ steps.normalize-working-directory.outputs.normalized }}
+        INPUT_CONFIGURATION: ${{ inputs.configuration }}
+        INPUT_FRAMEWORK: ${{ inputs.framework || 'none' }}
+        INPUT_RUNTIME: ${{ inputs.runtime || 'none' }}
+        STEP_NORMALIZE_ARGUMENTS_NORMALIZED: ${{ steps.normalize-arguments.outputs.normalized || 'none' }}
+        INPUT_NOLOGO: ${{ inputs.nologo }}
+        INPUT_NO_RESTORE: ${{ inputs.no-restore }}
+        INPUT_NO_BUILD: ${{ inputs.no-build }}
+        STEP_NORMALIZE_OUTPUT_NORMALIZED: ${{ steps.normalize-output.outputs.normalized || 'none' }}
+        STEP_NORMALIZE_ARTIFACTS_PATH_NORMALIZED: ${{ steps.normalize-artifacts-path.outputs.normalized || 'none' }}
+        INPUT_VERBOSITY: ${{ inputs.verbosity || 'auto' }}
+        STEP_BUILD_ARGS_OUTCOME_LABEL: ${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_BUILD_ARGS_ARGUMENTS: ${{ steps.build-args.outputs.arguments }}
+        STEP_RUN_COMMAND_OUTCOME_LABEL: ${{ steps.run-command.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_RUN_COMMAND_EXIT_CODE: ${{ steps.run-command.outputs.exit-code }}
+        STEP_RUN_COMMAND_OUTCOME: ${{ steps.run-command.outcome }}
+        STEP_RUN_COMMAND_EXECUTED_COMMAND: ${{ steps.run-command.outputs.executed-command }}
 
 branding:
   icon: "terminal"

@@ -215,32 +215,38 @@ runs:
     - name: "✅ Validate input : working-directory"
       shell: bash
       run: |
-        echo "::debug::Validating working-directory input: ${{ steps.normalize-working-directory.outputs.normalized }}"
+        echo "::debug::Validating working-directory input: ${STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED}"
 
-        if [ -z "${{ steps.normalize-working-directory.outputs.normalized }}" ]; then
+        if [ -z "${STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED}" ]; then
           echo "::error::Working directory input is required"
           exit 1
         fi
 
-        if [ "${{ steps.normalize-working-directory.outputs.exists }}" != "true" ]; then
-          echo "::error file=${{ steps.normalize-working-directory.outputs.normalized }}::Working directory does not exist or is not a directory: ${{ steps.normalize-working-directory.outputs.normalized }}"
+        if [ "${STEP_NORMALIZE_WORKING_DIRECTORY_EXISTS}" != "true" ]; then
+          echo "::error file=${STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED}::Working directory does not exist or is not a directory: ${STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Working directory validation completed successfully"
+      env:
+        STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED: ${{ steps.normalize-working-directory.outputs.normalized }}
+        STEP_NORMALIZE_WORKING_DIRECTORY_EXISTS: ${{ steps.normalize-working-directory.outputs.exists }}
 
     - name: "✅ Validate input : path"
       if: ${{ inputs.path != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating path input: ${{ steps.normalize-path.outputs.normalized }}"
+        echo "::debug::Validating path input: ${STEP_NORMALIZE_PATH_NORMALIZED}"
 
-        if [ "${{ steps.normalize-path.outputs.exists }}" != "true" ]; then
-          echo "::error file=${{ steps.normalize-path.outputs.normalized }}::Specified path does not exist: ${{ steps.normalize-path.outputs.normalized }}"
+        if [ "${STEP_NORMALIZE_PATH_EXISTS}" != "true" ]; then
+          echo "::error file=${STEP_NORMALIZE_PATH_NORMALIZED}::Specified path does not exist: ${STEP_NORMALIZE_PATH_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Path validation completed successfully"
+      env:
+        STEP_NORMALIZE_PATH_NORMALIZED: ${{ steps.normalize-path.outputs.normalized }}
+        STEP_NORMALIZE_PATH_EXISTS: ${{ steps.normalize-path.outputs.exists }}
 
     - name: "✅ Validate input : booleans"
       shell: bash
@@ -249,12 +255,12 @@ runs:
 
         for param in list-tests blame blame-crash blame-crash-collect-always blame-hang disable-build-servers; do
           case $param in
-            list-tests) value="${{ inputs.list-tests }}" ;;
-            blame) value="${{ inputs.blame }}" ;;
-            blame-crash) value="${{ inputs.blame-crash }}" ;;
-            blame-crash-collect-always) value="${{ inputs.blame-crash-collect-always }}" ;;
-            blame-hang) value="${{ inputs.blame-hang }}" ;;
-            disable-build-servers) value="${{ inputs.disable-build-servers }}" ;;
+            list-tests) value="${INPUT_LIST_TESTS}" ;;
+            blame) value="${INPUT_BLAME}" ;;
+            blame-crash) value="${INPUT_BLAME_CRASH}" ;;
+            blame-crash-collect-always) value="${INPUT_BLAME_CRASH_COLLECT_ALWAYS}" ;;
+            blame-hang) value="${INPUT_BLAME_HANG}" ;;
+            disable-build-servers) value="${INPUT_DISABLE_BUILD_SERVERS}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -263,128 +269,155 @@ runs:
         done
 
         echo "✅ Boolean inputs validation completed successfully"
+      env:
+        INPUT_LIST_TESTS: ${{ inputs.list-tests }}
+        INPUT_BLAME: ${{ inputs.blame }}
+        INPUT_BLAME_CRASH: ${{ inputs.blame-crash }}
+        INPUT_BLAME_CRASH_COLLECT_ALWAYS: ${{ inputs.blame-crash-collect-always }}
+        INPUT_BLAME_HANG: ${{ inputs.blame-hang }}
+        INPUT_DISABLE_BUILD_SERVERS: ${{ inputs.disable-build-servers }}
 
     - name: "✅ Validate input : settings"
       if: ${{ inputs.settings != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating settings input: ${{ steps.normalize-settings.outputs.normalized }}"
+        echo "::debug::Validating settings input: ${STEP_NORMALIZE_SETTINGS_NORMALIZED}"
 
-        if [ "${{ steps.normalize-settings.outputs.exists }}" != "true" ]; then
-          echo "::error file=${{ steps.normalize-settings.outputs.normalized }}::Test settings file does not exist: ${{ steps.normalize-settings.outputs.normalized }}"
+        if [ "${STEP_NORMALIZE_SETTINGS_EXISTS}" != "true" ]; then
+          echo "::error file=${STEP_NORMALIZE_SETTINGS_NORMALIZED}::Test settings file does not exist: ${STEP_NORMALIZE_SETTINGS_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Settings validation completed successfully"
+      env:
+        STEP_NORMALIZE_SETTINGS_NORMALIZED: ${{ steps.normalize-settings.outputs.normalized }}
+        STEP_NORMALIZE_SETTINGS_EXISTS: ${{ steps.normalize-settings.outputs.exists }}
 
     - name: "✅ Validate input : filter"
       if: ${{ inputs.filter != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating filter input: ${{ inputs.filter }}"
+        echo "::debug::Validating filter input: ${INPUT_FILTER}"
 
         # Basic validation for common mistakes (e.g., unbalanced quotes)
-        if [[ "${{ inputs.filter }}" =~ [\"\'].*[\"\'] ]]; then
-          echo "::error::Filter expression contains unbalanced quotes: ${{ inputs.filter }}"
+        if [[ "${INPUT_FILTER}" =~ [\"\'].*[\"\'] ]]; then
+          echo "::error::Filter expression contains unbalanced quotes: ${INPUT_FILTER}"
           exit 1
         fi
 
         echo "✅ Filter validation completed successfully"
+      env:
+        INPUT_FILTER: ${{ inputs.filter }}
 
     - name: "✅ Validate input : logger"
       if: ${{ inputs.logger != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating logger input: ${{ inputs.logger }}"
+        echo "::debug::Validating logger input: ${INPUT_LOGGER}"
 
         # Basic validation for common mistakes (e.g., unbalanced semicolons)
-        if [[ "${{ inputs.logger }}" =~ ";;" ]]; then
-          echo "::error::Logger configuration contains consecutive semicolons: ${{ inputs.logger }}"
+        if [[ "${INPUT_LOGGER}" =~ ";;" ]]; then
+          echo "::error::Logger configuration contains consecutive semicolons: ${INPUT_LOGGER}"
           exit 1
         fi
 
         echo "✅ Logger validation completed successfully"
+      env:
+        INPUT_LOGGER: ${{ inputs.logger }}
 
     - name: "✅ Validate input : collect"
       if: ${{ inputs.collect != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating collect input: ${{ inputs.collect }}"
+        echo "::debug::Validating collect input: ${INPUT_COLLECT}"
 
         # Basic validation for common mistakes (e.g., unbalanced quotes)
-        if [[ "${{ inputs.collect }}" =~ [\"\'].*[\"\'] ]]; then
-          echo "::error::Collect configuration contains unbalanced quotes: ${{ inputs.collect }}"
+        if [[ "${INPUT_COLLECT}" =~ [\"\'].*[\"\'] ]]; then
+          echo "::error::Collect configuration contains unbalanced quotes: ${INPUT_COLLECT}"
           exit 1
         fi
 
         echo "✅ Collect validation completed successfully"
+      env:
+        INPUT_COLLECT: ${{ inputs.collect }}
 
     - name: "✅ Validate input : blame-crash-dump-type"
       if: ${{ inputs.blame-crash-dump-type != '' && inputs.blame-crash-dump-type != 'full' }}
       shell: bash
       run: |
-        echo "::debug::Validating blame-crash-dump-type input: ${{ inputs.blame-crash-dump-type }}"
+        echo "::debug::Validating blame-crash-dump-type input: ${INPUT_BLAME_CRASH_DUMP_TYPE}"
 
-        case "${{ inputs.blame-crash-dump-type }}" in
+        case "${INPUT_BLAME_CRASH_DUMP_TYPE}" in
           full|mini) ;;
-          *) echo "::error::Invalid blame-crash-dump-type '${{ inputs.blame-crash-dump-type }}'. Must be 'full' or 'mini'"; exit 1 ;;
+          *) echo "::error::Invalid blame-crash-dump-type '${INPUT_BLAME_CRASH_DUMP_TYPE}'. Must be 'full' or 'mini'"; exit 1 ;;
         esac
 
         echo "✅ blame-crash-dump-type validation completed successfully"
+      env:
+        INPUT_BLAME_CRASH_DUMP_TYPE: ${{ inputs.blame-crash-dump-type }}
 
     - name: "✅ Validate input : blame-hang-dump-type"
       if: ${{ inputs.blame-hang-dump-type != '' && inputs.blame-hang-dump-type != 'full' }}
       shell: bash
       run: |
-        echo "::debug::Validating blame-hang-dump-type input: ${{ inputs.blame-hang-dump-type }}"
+        echo "::debug::Validating blame-hang-dump-type input: ${INPUT_BLAME_HANG_DUMP_TYPE}"
 
-        case "${{ inputs.blame-hang-dump-type }}" in
+        case "${INPUT_BLAME_HANG_DUMP_TYPE}" in
           full|mini|none) ;;
-          *) echo "::error::Invalid blame-hang-dump-type '${{ inputs.blame-hang-dump-type }}'. Must be 'full', 'mini', or 'none'"; exit 1 ;;
+          *) echo "::error::Invalid blame-hang-dump-type '${INPUT_BLAME_HANG_DUMP_TYPE}'. Must be 'full', 'mini', or 'none'"; exit 1 ;;
         esac
 
         echo "✅ blame-hang-dump-type validation completed successfully"
+      env:
+        INPUT_BLAME_HANG_DUMP_TYPE: ${{ inputs.blame-hang-dump-type }}
 
     - name: "✅ Validate input : blame-hang-timeout"
       if: ${{ inputs.blame-hang == 'true' && inputs.blame-hang-timeout != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating blame-hang-timeout input: ${{ inputs.blame-hang-timeout }}"
+        echo "::debug::Validating blame-hang-timeout input: ${INPUT_BLAME_HANG_TIMEOUT}"
 
-        if ! [[ "${{ inputs.blame-hang-timeout }}" =~ ^[0-9]+(\.[0-9]+)?(ms|s|m|h)?$ ]]; then
-          echo "::error::Invalid blame-hang-timeout format '${{ inputs.blame-hang-timeout }}'. Use format like '1h', '90m', '5400s', or '5400000ms'"
+        if ! [[ "${INPUT_BLAME_HANG_TIMEOUT}" =~ ^[0-9]+(\.[0-9]+)?(ms|s|m|h)?$ ]]; then
+          echo "::error::Invalid blame-hang-timeout format '${INPUT_BLAME_HANG_TIMEOUT}'. Use format like '1h', '90m', '5400s', or '5400000ms'"
           exit 1
         fi
 
         echo "✅ blame-hang-timeout validation completed successfully"
+      env:
+        INPUT_BLAME_HANG_TIMEOUT: ${{ inputs.blame-hang-timeout }}
 
     - name: "✅ Validate input : test-adapter-path"
       if: ${{ inputs.test-adapter-path != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating test-adapter-path input: ${{ steps.normalize-test-adapter-path.outputs.normalized }}"
+        echo "::debug::Validating test-adapter-path input: ${STEP_NORMALIZE_TEST_ADAPTER_PATH_NORMALIZED}"
 
-        if [ "${{ steps.normalize-test-adapter-path.outputs.exists }}" != "true" ]; then
-          echo "::error file=${{ steps.normalize-test-adapter-path.outputs.normalized }}::Test adapter path directory not found: ${{ steps.normalize-test-adapter-path.outputs.normalized }}"
+        if [ "${STEP_NORMALIZE_TEST_ADAPTER_PATH_EXISTS}" != "true" ]; then
+          echo "::error file=${STEP_NORMALIZE_TEST_ADAPTER_PATH_NORMALIZED}::Test adapter path directory not found: ${STEP_NORMALIZE_TEST_ADAPTER_PATH_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Test adapter path validation completed successfully"
+      env:
+        STEP_NORMALIZE_TEST_ADAPTER_PATH_NORMALIZED: ${{ steps.normalize-test-adapter-path.outputs.normalized }}
+        STEP_NORMALIZE_TEST_ADAPTER_PATH_EXISTS: ${{ steps.normalize-test-adapter-path.outputs.exists }}
 
     - name: "✅ Validate input : diag"
       if: ${{ inputs.diag != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating diag input: ${{ steps.normalize-diag.outputs.normalized }}"
+        echo "::debug::Validating diag input: ${STEP_NORMALIZE_DIAG_NORMALIZED}"
 
         # Check if parent directory exists for the diagnostic log file
-        DIAG_DIR=$(dirname "${{ steps.normalize-diag.outputs.normalized }}")
+        DIAG_DIR=$(dirname "${STEP_NORMALIZE_DIAG_NORMALIZED}")
         if [ ! -d "$DIAG_DIR" ]; then
           echo "::error::Directory for diagnostic log file does not exist: $DIAG_DIR"
           exit 1
         fi
 
         echo "✅ Diagnostic log path validation completed successfully"
+      env:
+        STEP_NORMALIZE_DIAG_NORMALIZED: ${{ steps.normalize-diag.outputs.normalized }}
 
     # ================== 🏗️ ==================
 
@@ -400,8 +433,8 @@ runs:
         # Boolean flags
         for param in list-tests disable-build-servers; do
           case $param in
-            list-tests) value="${{ inputs.list-tests }}" ;;
-            disable-build-servers) value="${{ inputs.disable-build-servers }}" ;;
+            list-tests) value="${INPUT_LIST_TESTS}" ;;
+            disable-build-servers) value="${INPUT_DISABLE_BUILD_SERVERS}" ;;
           esac
           if [ "$value" == "true" ] ; then
             ARGUMENTS="$ARGUMENTS --${param}"
@@ -411,13 +444,13 @@ runs:
         # Key-value options with normalized paths
         for param in settings results-directory test-adapter-path diag filter logger collect; do
           case $param in
-            settings) value="${{ steps.normalize-settings.outputs.normalized }}" ;;
-            results-directory) value="${{ steps.normalize-results-directory.outputs.normalized }}" ;;
-            test-adapter-path) value="${{ steps.normalize-test-adapter-path.outputs.normalized }}" ;;
-            diag) value="${{ steps.normalize-diag.outputs.normalized }}" ;;
-            filter) value="${{ inputs.filter }}" ;;
-            logger) value="${{ inputs.logger }}" ;;
-            collect) value="${{ inputs.collect }}" ;;
+            settings) value="${STEP_NORMALIZE_SETTINGS_NORMALIZED}" ;;
+            results-directory) value="${STEP_NORMALIZE_RESULTS_DIRECTORY_NORMALIZED}" ;;
+            test-adapter-path) value="${STEP_NORMALIZE_TEST_ADAPTER_PATH_NORMALIZED}" ;;
+            diag) value="${STEP_NORMALIZE_DIAG_NORMALIZED}" ;;
+            filter) value="${INPUT_FILTER}" ;;
+            logger) value="${INPUT_LOGGER}" ;;
+            collect) value="${INPUT_COLLECT}" ;;
           esac
           if [ -n "$value" ]; then
             ARGUMENTS="$ARGUMENTS --$param '$value'"
@@ -425,39 +458,39 @@ runs:
         done
 
         # Add normalized arguments
-        if [ -n "${{ steps.normalize-arguments.outputs.normalized }}" ]; then
-          NORMALIZED_ARGS="${{ steps.normalize-arguments.outputs.normalized }}"
-          echo "::debug::Original arguments: ${{ inputs.arguments }}"
+        if [ -n "${STEP_NORMALIZE_ARGUMENTS_NORMALIZED}" ]; then
+          NORMALIZED_ARGS="${STEP_NORMALIZE_ARGUMENTS_NORMALIZED}"
+          echo "::debug::Original arguments: ${INPUT_ARGUMENTS}"
           echo "::debug::Normalized arguments: $NORMALIZED_ARGS"
           ARGUMENTS="$ARGUMENTS $NORMALIZED_ARGS"
         fi
 
         # Add blame mode
-        if [ "${{ inputs.blame }}" = "true" ]; then
+        if [ "${INPUT_BLAME}" = "true" ]; then
           ARGUMENTS="$ARGUMENTS --blame"
         fi
 
-        if [ "${{ inputs.blame-crash }}" = "true" ]; then
+        if [ "${INPUT_BLAME_CRASH}" = "true" ]; then
           ARGUMENTS="$ARGUMENTS --blame-crash"
 
-          if [ "${{ inputs.blame-crash-dump-type }}" != "full" ]; then
-            ARGUMENTS="$ARGUMENTS --blame-crash-dump-type '${{ inputs.blame-crash-dump-type }}'"
+          if [ "${INPUT_BLAME_CRASH_DUMP_TYPE}" != "full" ]; then
+            ARGUMENTS="$ARGUMENTS --blame-crash-dump-type '${INPUT_BLAME_CRASH_DUMP_TYPE}'"
           fi
 
-          if [ "${{ inputs.blame-crash-collect-always }}" = "true" ]; then
+          if [ "${INPUT_BLAME_CRASH_COLLECT_ALWAYS}" = "true" ]; then
             ARGUMENTS="$ARGUMENTS --blame-crash-collect-always"
           fi
         fi
 
-        if [ "${{ inputs.blame-hang }}" = "true" ]; then
+        if [ "${INPUT_BLAME_HANG}" = "true" ]; then
           ARGUMENTS="$ARGUMENTS --blame-hang"
 
-          if [ "${{ inputs.blame-hang-dump-type }}" != "full" ]; then
-            ARGUMENTS="$ARGUMENTS --blame-hang-dump-type '${{ inputs.blame-hang-dump-type }}'"
+          if [ "${INPUT_BLAME_HANG_DUMP_TYPE}" != "full" ]; then
+            ARGUMENTS="$ARGUMENTS --blame-hang-dump-type '${INPUT_BLAME_HANG_DUMP_TYPE}'"
           fi
 
-          if [ "${{ inputs.blame-hang-timeout }}" != "1h" ]; then
-            ARGUMENTS="$ARGUMENTS --blame-hang-timeout '${{ inputs.blame-hang-timeout }}'"
+          if [ "${INPUT_BLAME_HANG_TIMEOUT}" != "1h" ]; then
+            ARGUMENTS="$ARGUMENTS --blame-hang-timeout '${INPUT_BLAME_HANG_TIMEOUT}'"
           fi
         fi
 
@@ -468,6 +501,25 @@ runs:
         echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
 
         echo "✅ Partial argument list built successfully: $ARGUMENTS"
+      env:
+        INPUT_LIST_TESTS: ${{ inputs.list-tests }}
+        INPUT_DISABLE_BUILD_SERVERS: ${{ inputs.disable-build-servers }}
+        STEP_NORMALIZE_SETTINGS_NORMALIZED: ${{ steps.normalize-settings.outputs.normalized }}
+        STEP_NORMALIZE_RESULTS_DIRECTORY_NORMALIZED: ${{ steps.normalize-results-directory.outputs.normalized }}
+        STEP_NORMALIZE_TEST_ADAPTER_PATH_NORMALIZED: ${{ steps.normalize-test-adapter-path.outputs.normalized }}
+        STEP_NORMALIZE_DIAG_NORMALIZED: ${{ steps.normalize-diag.outputs.normalized }}
+        INPUT_FILTER: ${{ inputs.filter }}
+        INPUT_LOGGER: ${{ inputs.logger }}
+        INPUT_COLLECT: ${{ inputs.collect }}
+        STEP_NORMALIZE_ARGUMENTS_NORMALIZED: ${{ steps.normalize-arguments.outputs.normalized }}
+        INPUT_ARGUMENTS: ${{ inputs.arguments }}
+        INPUT_BLAME: ${{ inputs.blame }}
+        INPUT_BLAME_CRASH: ${{ inputs.blame-crash }}
+        INPUT_BLAME_CRASH_DUMP_TYPE: ${{ inputs.blame-crash-dump-type }}
+        INPUT_BLAME_CRASH_COLLECT_ALWAYS: ${{ inputs.blame-crash-collect-always }}
+        INPUT_BLAME_HANG: ${{ inputs.blame-hang }}
+        INPUT_BLAME_HANG_DUMP_TYPE: ${{ inputs.blame-hang-dump-type }}
+        INPUT_BLAME_HANG_TIMEOUT: ${{ inputs.blame-hang-timeout }}
 
     # ================== 🚀 ==================
 
@@ -499,13 +551,13 @@ runs:
         echo "::debug::Verifying test execution results..."
 
         # Check if the command executed (has exit code output)
-        if [ -z "${{ steps.run-dotnet.outputs.exit-code }}" ]; then
+        if [ -z "${STEP_RUN_DOTNET_EXIT_CODE}" ]; then
           echo "::error::Test execution failed - no exit code available"
           exit 1
         fi
 
         # Report final status
-        EXIT_CODE="${{ steps.run-dotnet.outputs.exit-code }}"
+        EXIT_CODE="${STEP_RUN_DOTNET_EXIT_CODE}"
         if [ "$EXIT_CODE" = "0" ]; then
           echo "::debug::✅ .NET tests completed successfully"
         else
@@ -513,6 +565,8 @@ runs:
         fi
 
         echo "✅ Test execution verification completed"
+      env:
+        STEP_RUN_DOTNET_EXIT_CODE: ${{ steps.run-dotnet.outputs.exit-code }}
 
     # ================== 📊 ==================
 
@@ -520,53 +574,82 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+        cat >> $GITHUB_STEP_SUMMARY << EOF
         <details><summary>🧪 .NET Test</summary>
 
         ## 🔧 Input Parameters
         | Parameter | Value |
         |-----------|-------|
-        | � Path | `${{ steps.normalize-path.outputs.normalized || 'none' }}` |
-        | 📁 Working Directory | `${{ steps.normalize-working-directory.outputs.normalized }}` |
-        | ⚙️ Configuration | `${{ inputs.configuration }}` |
-        | 🎯 Framework | `${{ inputs.framework || 'none' }}` |
-        | 🖥️ Runtime | `${{ inputs.runtime || 'none' }}` |
-        | 🔧 Architecture | `${{ inputs.arch || 'none' }}` |
-        | 🗂️ Artifacts Path | `${{ steps.normalize-artifacts.outputs.normalized || 'none' }}` |
-        | 📝 Settings | `${{ steps.normalize-settings.outputs.normalized || 'none' }}` |
-        | 🔍 Filter | `${{ inputs.filter || 'none' }}` |
-        | 📊 Logger | `${{ inputs.logger || 'default' }}` |
-        | 📁 Results Directory | `${{ steps.normalize-results-directory.outputs.normalized || 'none' }}` |
-        | 📝 Data Collection | `${{ inputs.collect || 'none' }}` |
-        | 📁 Test Adapter Path | `${{ steps.normalize-test-adapter-path.outputs.normalized || 'none' }}` |
-        | 📝 Diagnostic Log | `${{ steps.normalize-diag.outputs.normalized || 'none' }}` |
-        | 📋 List Tests Only | `${{ inputs.list-tests }}` |
-        | 🔍 Blame Mode | `${{ inputs.blame }}` |
-        | 💥 Crash Collection | `${{ inputs.blame-crash }}` |
-        | 💥 Crash Dump Type | `${{ inputs.blame-crash-dump-type }}` |
-        | 💥 Crash Collect Always | `${{ inputs.blame-crash-collect-always }}` |
-        | ⏱️ Hang Detection | `${{ inputs.blame-hang }}` |
-        | ⏱️ Hang Dump Type | `${{ inputs.blame-hang-dump-type }}` |
-        | ⏱️ Hang Timeout | `${{ inputs.blame-hang-timeout }}` |
-        | 🖥️ Target OS | `${{ inputs.os || 'default' }}` |
+        | � Path | \`${STEP_NORMALIZE_PATH_NORMALIZED}\` |
+        | 📁 Working Directory | \`${STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED}\` |
+        | ⚙️ Configuration | \`${INPUT_CONFIGURATION}\` |
+        | 🎯 Framework | \`${INPUT_FRAMEWORK}\` |
+        | 🖥️ Runtime | \`${INPUT_RUNTIME}\` |
+        | 🔧 Architecture | \`${INPUT_ARCH}\` |
+        | 🗂️ Artifacts Path | \`${STEP_NORMALIZE_ARTIFACTS_NORMALIZED}\` |
+        | 📝 Settings | \`${STEP_NORMALIZE_SETTINGS_NORMALIZED}\` |
+        | 🔍 Filter | \`${INPUT_FILTER}\` |
+        | 📊 Logger | \`${INPUT_LOGGER}\` |
+        | 📁 Results Directory | \`${STEP_NORMALIZE_RESULTS_DIRECTORY_NORMALIZED}\` |
+        | 📝 Data Collection | \`${INPUT_COLLECT}\` |
+        | 📁 Test Adapter Path | \`${STEP_NORMALIZE_TEST_ADAPTER_PATH_NORMALIZED}\` |
+        | 📝 Diagnostic Log | \`${STEP_NORMALIZE_DIAG_NORMALIZED}\` |
+        | 📋 List Tests Only | \`${INPUT_LIST_TESTS}\` |
+        | 🔍 Blame Mode | \`${INPUT_BLAME}\` |
+        | 💥 Crash Collection | \`${INPUT_BLAME_CRASH}\` |
+        | 💥 Crash Dump Type | \`${INPUT_BLAME_CRASH_DUMP_TYPE}\` |
+        | 💥 Crash Collect Always | \`${INPUT_BLAME_CRASH_COLLECT_ALWAYS}\` |
+        | ⏱️ Hang Detection | \`${INPUT_BLAME_HANG}\` |
+        | ⏱️ Hang Dump Type | \`${INPUT_BLAME_HANG_DUMP_TYPE}\` |
+        | ⏱️ Hang Timeout | \`${INPUT_BLAME_HANG_TIMEOUT}\` |
+        | 🖥️ Target OS | \`${INPUT_OS}\` |
 
         ## 📤 Execution Results
         | Metric | Value |
         |--------|-------|
-        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
-        | 📊 Status | `${{ steps.run-dotnet.outcome }}` |
-        | 🚀 Executed Command | `${{ steps.run-dotnet.outputs.executed-command }}` |
+        | ✅ Exit Code | \`${STEP_RUN_DOTNET_EXIT_CODE}\` |
+        | 📊 Status | \`${STEP_RUN_DOTNET_OUTCOME}\` |
+        | 🚀 Executed Command | \`${STEP_RUN_DOTNET_EXECUTED_COMMAND}\` |
 
         ## ⚙️ Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🧪 Test Execution | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | � Execution Verification | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 🏗️ Argument Building | \`${STEP_BUILD_ARGS_OUTCOME_LABEL}\` |
+        | 🧪 Test Execution | \`${STEP_RUN_DOTNET_OUTCOME_LABEL}\` |
+        | � Execution Verification | \`${STEP_RUN_DOTNET_OUTCOME_LABEL}\` |
 
         </details>
         EOF
+      env:
+        STEP_NORMALIZE_PATH_NORMALIZED: ${{ steps.normalize-path.outputs.normalized || 'none' }}
+        STEP_NORMALIZE_WORKING_DIRECTORY_NORMALIZED: ${{ steps.normalize-working-directory.outputs.normalized }}
+        INPUT_CONFIGURATION: ${{ inputs.configuration }}
+        INPUT_FRAMEWORK: ${{ inputs.framework || 'none' }}
+        INPUT_RUNTIME: ${{ inputs.runtime || 'none' }}
+        INPUT_ARCH: ${{ inputs.arch || 'none' }}
+        STEP_NORMALIZE_ARTIFACTS_NORMALIZED: ${{ steps.normalize-artifacts.outputs.normalized || 'none' }}
+        STEP_NORMALIZE_SETTINGS_NORMALIZED: ${{ steps.normalize-settings.outputs.normalized || 'none' }}
+        INPUT_FILTER: ${{ inputs.filter || 'none' }}
+        INPUT_LOGGER: ${{ inputs.logger || 'default' }}
+        STEP_NORMALIZE_RESULTS_DIRECTORY_NORMALIZED: ${{ steps.normalize-results-directory.outputs.normalized || 'none' }}
+        INPUT_COLLECT: ${{ inputs.collect || 'none' }}
+        STEP_NORMALIZE_TEST_ADAPTER_PATH_NORMALIZED: ${{ steps.normalize-test-adapter-path.outputs.normalized || 'none' }}
+        STEP_NORMALIZE_DIAG_NORMALIZED: ${{ steps.normalize-diag.outputs.normalized || 'none' }}
+        INPUT_LIST_TESTS: ${{ inputs.list-tests }}
+        INPUT_BLAME: ${{ inputs.blame }}
+        INPUT_BLAME_CRASH: ${{ inputs.blame-crash }}
+        INPUT_BLAME_CRASH_DUMP_TYPE: ${{ inputs.blame-crash-dump-type }}
+        INPUT_BLAME_CRASH_COLLECT_ALWAYS: ${{ inputs.blame-crash-collect-always }}
+        INPUT_BLAME_HANG: ${{ inputs.blame-hang }}
+        INPUT_BLAME_HANG_DUMP_TYPE: ${{ inputs.blame-hang-dump-type }}
+        INPUT_BLAME_HANG_TIMEOUT: ${{ inputs.blame-hang-timeout }}
+        INPUT_OS: ${{ inputs.os || 'default' }}
+        STEP_RUN_DOTNET_EXIT_CODE: ${{ steps.run-dotnet.outputs.exit-code }}
+        STEP_RUN_DOTNET_OUTCOME: ${{ steps.run-dotnet.outcome }}
+        STEP_RUN_DOTNET_EXECUTED_COMMAND: ${{ steps.run-dotnet.outputs.executed-command }}
+        STEP_BUILD_ARGS_OUTCOME_LABEL: ${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_RUN_DOTNET_OUTCOME_LABEL: ${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
 
 branding:
   icon: "check-circle"

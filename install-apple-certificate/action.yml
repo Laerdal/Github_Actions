@@ -300,12 +300,12 @@ runs:
         echo "::debug::Validating keychain-name input: ${INPUT_KEYCHAIN_NAME}"
 
         # Validate keychain name doesn't contain spaces or special characters
-        if [[ "${INPUT_KEYCHAIN_NAME}" =~ [[:space:]] ]]; then
+        if printf '%s' "${INPUT_KEYCHAIN_NAME}" | grep -qzE '[[:space:]]'; then
           echo "::error::Keychain name cannot contain spaces: ${INPUT_KEYCHAIN_NAME}"
           exit 1
         fi
 
-        if [[ "${INPUT_KEYCHAIN_NAME}" =~ [/\\:*?"<>\\|] ]]; then
+        if printf '%s' "${INPUT_KEYCHAIN_NAME}" | grep -qz '[/\\:*?"<>|]'; then
           echo "::error::Keychain name contains invalid characters: ${INPUT_KEYCHAIN_NAME}"
           exit 1
         fi
@@ -507,9 +507,10 @@ runs:
 
           # List certificates for verification
           echo "::debug::Installed certificates:"
+          # Informational only: openssl may fail to decode the certificate, and that must not fail the step
           security find-certificate -a "${INPUT_KEYCHAIN_NAME}" -p 2>/dev/null | openssl x509 -subject -noout 2>/dev/null | while read -r line; do
             echo "::debug::  🔒 $line"
-          done
+          done || true
         else
           echo "::warning::No certificates found in keychain"
         fi

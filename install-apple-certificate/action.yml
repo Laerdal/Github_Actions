@@ -507,9 +507,10 @@ runs:
 
           # List certificates for verification
           echo "::debug::Installed certificates:"
+          # Informational only: openssl may fail to decode the certificate, and that must not fail the step
           security find-certificate -a "${INPUT_KEYCHAIN_NAME}" -p 2>/dev/null | openssl x509 -subject -noout 2>/dev/null | while read -r line; do
             echo "::debug::  🔒 $line"
-          done
+          done || true
         else
           echo "::warning::No certificates found in keychain"
         fi

@@ -178,20 +178,25 @@ runs:
     - name: "🔒 Mask sensitive data"
       shell: bash
       run: |
-        if [ -n "${{ inputs.baseUrlUserPassword }}" ]; then
-          echo "::add-mask::${{ inputs.baseUrlUserPassword }}"
+        if [ -n "${INPUT_BASEURLUSERPASSWORD}" ]; then
+          echo "::add-mask::${INPUT_BASEURLUSERPASSWORD}"
         fi
-        if [ -n "${{ inputs.baseUrlUsername }}" ]; then
-          echo "::add-mask::${{ inputs.baseUrlUsername }}"
+        if [ -n "${INPUT_BASEURLUSERNAME}" ]; then
+          echo "::add-mask::${INPUT_BASEURLUSERNAME}"
         fi
-        if [ -n "${{ inputs.github-token }}" ]; then
-          echo "::add-mask::${{ inputs.github-token }}"
+        if [ -n "${INPUT_GITHUB_TOKEN}" ]; then
+          echo "::add-mask::${INPUT_GITHUB_TOKEN}"
         fi
-        if [ -n "${{ inputs.github-bearer-token }}" ]; then
-          echo "::add-mask::${{ inputs.github-bearer-token }}"
+        if [ -n "${INPUT_GITHUB_BEARER_TOKEN}" ]; then
+          echo "::add-mask::${INPUT_GITHUB_BEARER_TOKEN}"
         fi
 
         echo "✅ Masked sensitive inputs"
+      env:
+        INPUT_BASEURLUSERPASSWORD: ${{ inputs.baseUrlUserPassword }}
+        INPUT_BASEURLUSERNAME: ${{ inputs.baseUrlUsername }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_GITHUB_BEARER_TOKEN: ${{ inputs.github-bearer-token }}
 
     # ================== 📁 ==================
 
@@ -227,16 +232,16 @@ runs:
         echo "::debug::Validating boolean inputs..."
         for param in exclude-dev exclude-test-projects isBaseUrlPasswordClearText recursive no-serial-number enable-github-licenses disable-package-restore disable-hash-computation include-project-references set-nuget-purl; do
           case $param in
-            exclude-dev) value="${{ inputs.exclude-dev }}" ;;
-            exclude-test-projects) value="${{ inputs.exclude-test-projects }}" ;;
-            isBaseUrlPasswordClearText) value="${{ inputs.isBaseUrlPasswordClearText }}" ;;
-            recursive) value="${{ inputs.recursive }}" ;;
-            no-serial-number) value="${{ inputs.no-serial-number }}" ;;
-            enable-github-licenses) value="${{ inputs.enable-github-licenses }}" ;;
-            disable-package-restore) value="${{ inputs.disable-package-restore }}" ;;
-            disable-hash-computation) value="${{ inputs.disable-hash-computation }}" ;;
-            include-project-references) value="${{ inputs.include-project-references }}" ;;
-            set-nuget-purl) value="${{ inputs.set-nuget-purl }}" ;;
+            exclude-dev) value="${INPUT_EXCLUDE_DEV}" ;;
+            exclude-test-projects) value="${INPUT_EXCLUDE_TEST_PROJECTS}" ;;
+            isBaseUrlPasswordClearText) value="${INPUT_ISBASEURLPASSWORDCLEARTEXT}" ;;
+            recursive) value="${INPUT_RECURSIVE}" ;;
+            no-serial-number) value="${INPUT_NO_SERIAL_NUMBER}" ;;
+            enable-github-licenses) value="${INPUT_ENABLE_GITHUB_LICENSES}" ;;
+            disable-package-restore) value="${INPUT_DISABLE_PACKAGE_RESTORE}" ;;
+            disable-hash-computation) value="${INPUT_DISABLE_HASH_COMPUTATION}" ;;
+            include-project-references) value="${INPUT_INCLUDE_PROJECT_REFERENCES}" ;;
+            set-nuget-purl) value="${INPUT_SET_NUGET_PURL}" ;;
           esac
           if [ -n "$value" ] && [ "$value" != "true" ] && [ "$value" != "false" ]; then
             echo "::error::Parameter $param must be 'true' or 'false', got: $value"
@@ -245,52 +250,69 @@ runs:
         done
 
         echo "✅ Boolean inputs validation completed successfully"
+      env:
+        INPUT_EXCLUDE_DEV: ${{ inputs.exclude-dev }}
+        INPUT_EXCLUDE_TEST_PROJECTS: ${{ inputs.exclude-test-projects }}
+        INPUT_ISBASEURLPASSWORDCLEARTEXT: ${{ inputs.isBaseUrlPasswordClearText }}
+        INPUT_RECURSIVE: ${{ inputs.recursive }}
+        INPUT_NO_SERIAL_NUMBER: ${{ inputs.no-serial-number }}
+        INPUT_ENABLE_GITHUB_LICENSES: ${{ inputs.enable-github-licenses }}
+        INPUT_DISABLE_PACKAGE_RESTORE: ${{ inputs.disable-package-restore }}
+        INPUT_DISABLE_HASH_COMPUTATION: ${{ inputs.disable-hash-computation }}
+        INPUT_INCLUDE_PROJECT_REFERENCES: ${{ inputs.include-project-references }}
+        INPUT_SET_NUGET_PURL: ${{ inputs.set-nuget-purl }}
 
     - name: "✅ Validate input : output-format"
       shell: bash
       run: |
-        echo "::debug::Validating output-format input: ${{ inputs.output-format }}"
+        echo "::debug::Validating output-format input: ${INPUT_OUTPUT_FORMAT}"
 
-        case "${{ inputs.output-format }}" in
+        case "${INPUT_OUTPUT_FORMAT}" in
           Auto|Json|UnsafeJson|Xml) ;;
           *) echo "::error::Invalid output format. Must be one of: Auto, Json, UnsafeJson, Xml"; exit 1 ;;
         esac
 
         echo "✅ Output format validation completed successfully"
+      env:
+        INPUT_OUTPUT_FORMAT: ${{ inputs.output-format }}
 
     - name: "✅ Validate input : set-type"
       id: formatted-set-type
       shell: bash
       run: |
-        echo "::debug::Validating set-type input: ${{ inputs.set-type }}"
+        echo "::debug::Validating set-type input: ${INPUT_SET_TYPE}"
 
-        case "${{ inputs.set-type }}" in
+        case "${INPUT_SET_TYPE}" in
           Application|Container|Cryptographic_Asset|Data|Device|Device_Driver|File|Firmware|Framework|Library|Machine_Learning_Model|Null|Operating_System|Platform) ;;
           *) echo "::error::Invalid component type. Must be one of: Application, Container, Cryptographic_Asset, Data, Device, Device_Driver, File, Firmware, Framework, Library, Machine_Learning_Model, Null, Operating_System, Platform"; exit 1 ;;
         esac
 
         echo "✅ Component type validation completed successfully"
+      env:
+        INPUT_SET_TYPE: ${{ inputs.set-type }}
 
     - name: "✅ Validate input : spec-version"
       if: ${{ inputs.spec-version != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating spec-version input: ${{ inputs.spec-version }}"
+        echo "::debug::Validating spec-version input: ${INPUT_SPEC_VERSION}"
 
-        case "${{ inputs.spec-version }}" in
+        case "${INPUT_SPEC_VERSION}" in
           1.0|1.1|1.2|1.3|1.4|1.5|1.6|1.7) ;;
           *) echo "::error::Invalid spec-version. Must be one of: 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7"; exit 1 ;;
         esac
 
         echo "✅ Spec version validation completed successfully"
+      env:
+        INPUT_SPEC_VERSION: ${{ inputs.spec-version }}
 
     - name: "✅ Validate input : exclude-filter"
       if: ${{ inputs.exclude-filter != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating exclude-filter input: ${{ inputs.exclude-filter }}"
+        echo "::debug::Validating exclude-filter input: ${INPUT_EXCLUDE_FILTER}"
 
-        IFS=',' read -ra FILTERS <<< "${{ inputs.exclude-filter }}"
+        IFS=',' read -ra FILTERS <<< "${INPUT_EXCLUDE_FILTER}"
         for filter in "${FILTERS[@]}"; do
           if ! [[ "$filter" =~ ^[^@]+@[^@]+$ ]]; then
             echo "::error::Invalid exclude-filter format. Each filter must be in the form 'name@version'. Invalid filter: $filter"
@@ -299,32 +321,38 @@ runs:
         done
 
         echo "✅ Exclude filter validation completed successfully"
+      env:
+        INPUT_EXCLUDE_FILTER: ${{ inputs.exclude-filter }}
 
     - name: "✅ Validate input : url"
       if: ${{ inputs.url != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating URL input: ${{ inputs.url }}"
+        echo "::debug::Validating URL input: ${INPUT_URL}"
 
-        if ! [[ "${{ inputs.url }}" =~ ^https?:// ]]; then
-          echo "::error::Invalid URL format. Must start with http:// or https://: ${{ inputs.url }}"
+        if ! [[ "${INPUT_URL}" =~ ^https?:// ]]; then
+          echo "::error::Invalid URL format. Must start with http:// or https://: ${INPUT_URL}"
           exit 1
         fi
 
         echo "✅ URL validation completed successfully"
+      env:
+        INPUT_URL: ${{ inputs.url }}
 
     - name: "✅ Validate input : dotnet-command-timeout"
       if: ${{ inputs.dotnet-command-timeout != '' && inputs.dotnet-command-timeout != '300000' }}
       shell: bash
       run: |
-        echo "::debug::Validating dotnet-command-timeout input: ${{ inputs.dotnet-command-timeout }}"
+        echo "::debug::Validating dotnet-command-timeout input: ${INPUT_DOTNET_COMMAND_TIMEOUT}"
 
-        if ! [[ "${{ inputs.dotnet-command-timeout }}" =~ ^[0-9]+$ ]]; then
-          echo "::error::Timeout must be a positive number: ${{ inputs.dotnet-command-timeout }}"
+        if ! [[ "${INPUT_DOTNET_COMMAND_TIMEOUT}" =~ ^[0-9]+$ ]]; then
+          echo "::error::Timeout must be a positive number: ${INPUT_DOTNET_COMMAND_TIMEOUT}"
           exit 1
         fi
 
         echo "✅ Timeout validation completed successfully"
+      env:
+        INPUT_DOTNET_COMMAND_TIMEOUT: ${{ inputs.dotnet-command-timeout }}
 
     # Skipping checks for now
     # - name: "✅ Validate input : set-version"
@@ -347,48 +375,56 @@ runs:
         echo "::debug::Validating GitHub authentication inputs"
 
         # Check GitHub username/token combination
-        if [ -n "${{ inputs.github-username }}" ] && [ -z "${{ inputs.github-token }}" ]; then
+        if [ -n "${INPUT_GITHUB_USERNAME}" ] && [ -z "${INPUT_GITHUB_TOKEN}" ]; then
           echo "::error::GitHub token must be provided when GitHub username is specified"
           exit 1
         fi
 
-        if [ -n "${{ inputs.github-token }}" ] && [ -z "${{ inputs.github-username }}" ]; then
+        if [ -n "${INPUT_GITHUB_TOKEN}" ] && [ -z "${INPUT_GITHUB_USERNAME}" ]; then
           echo "::error::GitHub username must be provided when GitHub token is specified"
           exit 1
         fi
 
         # Bearer token is standalone
-        if [ -n "${{ inputs.github-bearer-token }}" ] && [ -n "${{ inputs.github-username }}" ]; then
+        if [ -n "${INPUT_GITHUB_BEARER_TOKEN}" ] && [ -n "${INPUT_GITHUB_USERNAME}" ]; then
           echo "::warning::GitHub bearer token will be used instead of username/token combination"
         fi
 
         echo "✅ GitHub authentication validation completed successfully"
+      env:
+        INPUT_GITHUB_USERNAME: ${{ inputs.github-username }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_GITHUB_BEARER_TOKEN: ${{ inputs.github-bearer-token }}
 
     - name: "✅ Validate input : import-metadata-path"
       if: ${{ inputs.import-metadata-path != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating import-metadata-path input: ${{ steps.normalize-import-metadata-path.outputs.normalized }}"
+        echo "::debug::Validating import-metadata-path input: ${STEP_NORMALIZE_IMPORT_METADATA_PATH_NORMALIZED}"
 
-        if [ ! -f "${{ steps.normalize-import-metadata-path.outputs.normalized }}" ]; then
-          echo "::error file=${{ steps.normalize-import-metadata-path.outputs.normalized }}::Import metadata file not found: ${{ steps.normalize-import-metadata-path.outputs.normalized }}"
+        if [ ! -f "${STEP_NORMALIZE_IMPORT_METADATA_PATH_NORMALIZED}" ]; then
+          echo "::error file=${STEP_NORMALIZE_IMPORT_METADATA_PATH_NORMALIZED}::Import metadata file not found: ${STEP_NORMALIZE_IMPORT_METADATA_PATH_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Import metadata path validation completed successfully"
+      env:
+        STEP_NORMALIZE_IMPORT_METADATA_PATH_NORMALIZED: ${{ steps.normalize-import-metadata-path.outputs.normalized }}
 
     - name: "✅ Validate input : base-intermediate-output-path"
       if: ${{ inputs.base-intermediate-output-path != '' }}
       shell: bash
       run: |
-        echo "::debug::Validating base-intermediate-output-path input: ${{ steps.normalize-base-intermediate-output-path.outputs.normalized }}"
+        echo "::debug::Validating base-intermediate-output-path input: ${STEP_NORMALIZE_BASE_INTERMEDIATE_OUTPUT_PATH_NORMALIZED}"
 
-        if [ ! -d "${{ steps.normalize-base-intermediate-output-path.outputs.normalized }}" ]; then
-          echo "::error file=${{ steps.normalize-base-intermediate-output-path.outputs.normalized }}::Base intermediate output path not found: ${{ steps.normalize-base-intermediate-output-path.outputs.normalized }}"
+        if [ ! -d "${STEP_NORMALIZE_BASE_INTERMEDIATE_OUTPUT_PATH_NORMALIZED}" ]; then
+          echo "::error file=${STEP_NORMALIZE_BASE_INTERMEDIATE_OUTPUT_PATH_NORMALIZED}::Base intermediate output path not found: ${STEP_NORMALIZE_BASE_INTERMEDIATE_OUTPUT_PATH_NORMALIZED}"
           exit 1
         fi
 
         echo "✅ Base intermediate output path validation completed successfully"
+      env:
+        STEP_NORMALIZE_BASE_INTERMEDIATE_OUTPUT_PATH_NORMALIZED: ${{ steps.normalize-base-intermediate-output-path.outputs.normalized }}
 
     # ================== 🏗️  ==================
 
@@ -401,24 +437,24 @@ runs:
         ARGUMENTS="run dotnet-cyclonedx"
 
         # Start with path argument if provided
-        if [ -n "${{ steps.normalize-path.outputs.normalized }}" ]; then
-          ARGUMENTS="$ARGUMENTS '${{ steps.normalize-path.outputs.normalized }}'"
+        if [ -n "${STEP_NORMALIZE_PATH_NORMALIZED}" ]; then
+          ARGUMENTS="$ARGUMENTS '${STEP_NORMALIZE_PATH_NORMALIZED}'"
         fi
 
         # Key-value options
         for param in filename url baseUrlUsername baseUrlUserPassword dotnet-command-timeout base-intermediate-output-path import-metadata-path set-name set-version spec-version exclude-filter; do
           case $param in
-            filename) value="${{ steps.normalize-filename.outputs.normalized }}" ;;
-            url) value="${{ inputs.url }}" ;;
-            baseUrlUsername) value="${{ inputs.baseUrlUsername }}" ;;
-            baseUrlUserPassword) value="${{ inputs.baseUrlUserPassword }}" ;;
-            dotnet-command-timeout) value="${{ inputs.dotnet-command-timeout }}" ;;
-            base-intermediate-output-path) value="${{ steps.normalize-base-intermediate-output-path.outputs.normalized }}" ;;
-            import-metadata-path) value="${{ steps.normalize-import-metadata-path.outputs.normalized }}" ;;
-            set-name) value="${{ inputs.set-name }}" ;;
-            set-version) value="${{ inputs.set-version }}" ;;
-            spec-version) value="${{ inputs.spec-version }}" ;;
-            exclude-filter) value="${{ inputs.exclude-filter }}" ;;
+            filename) value="${STEP_NORMALIZE_FILENAME_NORMALIZED}" ;;
+            url) value="${INPUT_URL}" ;;
+            baseUrlUsername) value="${INPUT_BASEURLUSERNAME}" ;;
+            baseUrlUserPassword) value="${INPUT_BASEURLUSERPASSWORD}" ;;
+            dotnet-command-timeout) value="${INPUT_DOTNET_COMMAND_TIMEOUT}" ;;
+            base-intermediate-output-path) value="${STEP_NORMALIZE_BASE_INTERMEDIATE_OUTPUT_PATH_NORMALIZED}" ;;
+            import-metadata-path) value="${STEP_NORMALIZE_IMPORT_METADATA_PATH_NORMALIZED}" ;;
+            set-name) value="${INPUT_SET_NAME}" ;;
+            set-version) value="${INPUT_SET_VERSION}" ;;
+            spec-version) value="${INPUT_SPEC_VERSION}" ;;
+            exclude-filter) value="${INPUT_EXCLUDE_FILTER}" ;;
           esac
           if [ -n "$value" ] ; then
             ARGUMENTS="$ARGUMENTS --$param '$value'"
@@ -426,35 +462,35 @@ runs:
         done
 
         # Output format (only if not Auto)
-        if [ "${{ inputs.output-format }}" != "Auto" ]; then
-          ARGUMENTS="$ARGUMENTS --output-format '${{ inputs.output-format }}'"
+        if [ "${INPUT_OUTPUT_FORMAT}" != "Auto" ]; then
+          ARGUMENTS="$ARGUMENTS --output-format '${INPUT_OUTPUT_FORMAT}'"
         fi
 
         # Component type (only if not Application)
-        if [ "${{ inputs.set-type }}" != "Application" ]; then
-          ARGUMENTS="$ARGUMENTS --set-type '${{ inputs.set-type }}'"
+        if [ "${INPUT_SET_TYPE}" != "Application" ]; then
+          ARGUMENTS="$ARGUMENTS --set-type '${INPUT_SET_TYPE}'"
         fi
 
         # GitHub authentication
-        if [ -n "${{ inputs.github-bearer-token }}" ]; then
-          ARGUMENTS="$ARGUMENTS --github-bearer-token '${{ inputs.github-bearer-token }}'"
-        elif [ -n "${{ inputs.github-username }}" ] && [ -n "${{ inputs.github-token }}" ]; then
-          ARGUMENTS="$ARGUMENTS --github-username '${{ inputs.github-username }}' --github-token '${{ inputs.github-token }}'"
+        if [ -n "${INPUT_GITHUB_BEARER_TOKEN}" ]; then
+          ARGUMENTS="$ARGUMENTS --github-bearer-token '${INPUT_GITHUB_BEARER_TOKEN}'"
+        elif [ -n "${INPUT_GITHUB_USERNAME}" ] && [ -n "${INPUT_GITHUB_TOKEN}" ]; then
+          ARGUMENTS="$ARGUMENTS --github-username '${INPUT_GITHUB_USERNAME}' --github-token '${INPUT_GITHUB_TOKEN}'"
         fi
 
         # Boolean flags
         for param in exclude-dev exclude-test-projects isBaseUrlPasswordClearText recursive no-serial-number enable-github-licenses disable-package-restore disable-hash-computation include-project-references set-nuget-purl; do
           case $param in
-            exclude-dev) value="${{ inputs.exclude-dev }}" ;;
-            exclude-test-projects) value="${{ inputs.exclude-test-projects }}" ;;
-            isBaseUrlPasswordClearText) value="${{ inputs.isBaseUrlPasswordClearText }}" ;;
-            recursive) value="${{ inputs.recursive }}" ;;
-            no-serial-number) value="${{ inputs.no-serial-number }}" ;;
-            enable-github-licenses) value="${{ inputs.enable-github-licenses }}" ;;
-            disable-package-restore) value="${{ inputs.disable-package-restore }}" ;;
-            disable-hash-computation) value="${{ inputs.disable-hash-computation }}" ;;
-            include-project-references) value="${{ inputs.include-project-references }}" ;;
-            set-nuget-purl) value="${{ inputs.set-nuget-purl }}" ;;
+            exclude-dev) value="${INPUT_EXCLUDE_DEV}" ;;
+            exclude-test-projects) value="${INPUT_EXCLUDE_TEST_PROJECTS}" ;;
+            isBaseUrlPasswordClearText) value="${INPUT_ISBASEURLPASSWORDCLEARTEXT}" ;;
+            recursive) value="${INPUT_RECURSIVE}" ;;
+            no-serial-number) value="${INPUT_NO_SERIAL_NUMBER}" ;;
+            enable-github-licenses) value="${INPUT_ENABLE_GITHUB_LICENSES}" ;;
+            disable-package-restore) value="${INPUT_DISABLE_PACKAGE_RESTORE}" ;;
+            disable-hash-computation) value="${INPUT_DISABLE_HASH_COMPUTATION}" ;;
+            include-project-references) value="${INPUT_INCLUDE_PROJECT_REFERENCES}" ;;
+            set-nuget-purl) value="${INPUT_SET_NUGET_PURL}" ;;
           esac
           if [ "$value" = "true" ]; then
             ARGUMENTS="$ARGUMENTS --${param}"
@@ -466,6 +502,34 @@ runs:
 
         echo "arguments=$ARGUMENTS" >> $GITHUB_OUTPUT
         echo "✅ Argument list built successfully: $ARGUMENTS"
+      env:
+        STEP_NORMALIZE_PATH_NORMALIZED: ${{ steps.normalize-path.outputs.normalized }}
+        STEP_NORMALIZE_FILENAME_NORMALIZED: ${{ steps.normalize-filename.outputs.normalized }}
+        INPUT_URL: ${{ inputs.url }}
+        INPUT_BASEURLUSERNAME: ${{ inputs.baseUrlUsername }}
+        INPUT_BASEURLUSERPASSWORD: ${{ inputs.baseUrlUserPassword }}
+        INPUT_DOTNET_COMMAND_TIMEOUT: ${{ inputs.dotnet-command-timeout }}
+        STEP_NORMALIZE_BASE_INTERMEDIATE_OUTPUT_PATH_NORMALIZED: ${{ steps.normalize-base-intermediate-output-path.outputs.normalized }}
+        STEP_NORMALIZE_IMPORT_METADATA_PATH_NORMALIZED: ${{ steps.normalize-import-metadata-path.outputs.normalized }}
+        INPUT_SET_NAME: ${{ inputs.set-name }}
+        INPUT_SET_VERSION: ${{ inputs.set-version }}
+        INPUT_SPEC_VERSION: ${{ inputs.spec-version }}
+        INPUT_EXCLUDE_FILTER: ${{ inputs.exclude-filter }}
+        INPUT_OUTPUT_FORMAT: ${{ inputs.output-format }}
+        INPUT_SET_TYPE: ${{ inputs.set-type }}
+        INPUT_GITHUB_BEARER_TOKEN: ${{ inputs.github-bearer-token }}
+        INPUT_GITHUB_USERNAME: ${{ inputs.github-username }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_EXCLUDE_DEV: ${{ inputs.exclude-dev }}
+        INPUT_EXCLUDE_TEST_PROJECTS: ${{ inputs.exclude-test-projects }}
+        INPUT_ISBASEURLPASSWORDCLEARTEXT: ${{ inputs.isBaseUrlPasswordClearText }}
+        INPUT_RECURSIVE: ${{ inputs.recursive }}
+        INPUT_NO_SERIAL_NUMBER: ${{ inputs.no-serial-number }}
+        INPUT_ENABLE_GITHUB_LICENSES: ${{ inputs.enable-github-licenses }}
+        INPUT_DISABLE_PACKAGE_RESTORE: ${{ inputs.disable-package-restore }}
+        INPUT_DISABLE_HASH_COMPUTATION: ${{ inputs.disable-hash-computation }}
+        INPUT_INCLUDE_PROJECT_REFERENCES: ${{ inputs.include-project-references }}
+        INPUT_SET_NUGET_PURL: ${{ inputs.set-nuget-purl }}
 
     # ================== 🚀 ==================
 
@@ -499,15 +563,15 @@ runs:
         echo "::debug::Verifying CycloneDX SBOM generation..."
 
         # Determine the expected output directory and filename
-        OUTPUT_DIR="${{ inputs.output }}"
+        OUTPUT_DIR="${INPUT_OUTPUT}"
         if [ -z "$OUTPUT_DIR" ]; then
           OUTPUT_DIR="."
         fi
 
-        FILENAME="${{ steps.normalize-filename.outputs.normalized }}"
+        FILENAME="${STEP_NORMALIZE_FILENAME_NORMALIZED}"
         if [ -z "$FILENAME" ]; then
           # Default filename based on output format
-          case "${{ inputs.output-format }}" in
+          case "${INPUT_OUTPUT_FORMAT}" in
             Json|UnsafeJson) FILENAME="bom.json" ;;
             Xml) FILENAME="bom.xml" ;;
             Auto) FILENAME="bom.xml" ;;  # Default for Auto
@@ -554,6 +618,10 @@ runs:
         fi
 
         echo "::debug::SBOM generation verification completed"
+      env:
+        INPUT_OUTPUT: ${{ inputs.output }}
+        STEP_NORMALIZE_FILENAME_NORMALIZED: ${{ steps.normalize-filename.outputs.normalized }}
+        INPUT_OUTPUT_FORMAT: ${{ inputs.output-format }}
 
     # ================== 📊 ==================
 
@@ -561,48 +629,73 @@ runs:
       if: always() && inputs.show-summary == 'true'
       shell: bash
       run: |
-        cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-        <details><summary>🔗 CycloneDX ${{ inputs.set-name || 'auto-generated' }} ${{ inputs.set-version || '0.0.0' }}`</summary>
+        cat >> $GITHUB_STEP_SUMMARY << EOF
+        <details><summary>🔗 CycloneDX ${INPUT_SET_NAME} ${INPUT_SET_VERSION}\`</summary>
 
         ## 🔧 CycloneDX Specific Parameters
         | Parameter | Value |
         |-----------|-------|
-        | 📄 Filename | `${{ steps.normalize-filename.outputs.normalized || 'auto-generated' }}` |
-        | 📋 Output Format | `${{ inputs.output-format }}` |
-        | 🚫 Exclude Dev Dependencies | `${{ inputs.exclude-dev }}` |
-        | 🧪 Exclude Test Projects | `${{ inputs.exclude-test-projects }}` |
-        | 🔄 Recursive Scan | `${{ inputs.recursive }}` |
-        | 🔢 Include Serial Number | `${{ inputs.no-serial-number == 'true' && 'false' || 'true' }}` |
-        | 🐙 GitHub License Resolution | `${{ inputs.enable-github-licenses }}` |
-        | 📦 Package Restore | `${{ inputs.disable-package-restore == 'true' && 'disabled' || 'enabled' }}` |
-        | 🔗 Include Project References | `${{ inputs.include-project-references }}` |
-        | 🏷️ Component Name | `${{ inputs.set-name || 'auto-generated' }}` |
-        | 📌 Component Version | `${{ inputs.set-version || '0.0.0' }}` |
-        | 🏗️ Component Type | `${{ inputs.set-type }}` |
-        | 📐 Spec Version | `${{ inputs.spec-version || 'tool default' }}` |
+        | 📄 Filename | \`${STEP_NORMALIZE_FILENAME_NORMALIZED}\` |
+        | 📋 Output Format | \`${INPUT_OUTPUT_FORMAT}\` |
+        | 🚫 Exclude Dev Dependencies | \`${INPUT_EXCLUDE_DEV}\` |
+        | 🧪 Exclude Test Projects | \`${INPUT_EXCLUDE_TEST_PROJECTS}\` |
+        | 🔄 Recursive Scan | \`${INPUT_RECURSIVE}\` |
+        | 🔢 Include Serial Number | \`${INPUT_NO_SERIAL_NUMBER_LABEL}\` |
+        | 🐙 GitHub License Resolution | \`${INPUT_ENABLE_GITHUB_LICENSES}\` |
+        | 📦 Package Restore | \`${INPUT_DISABLE_PACKAGE_RESTORE_LABEL}\` |
+        | 🔗 Include Project References | \`${INPUT_INCLUDE_PROJECT_REFERENCES}\` |
+        | 🏷️ Component Name | \`${INPUT_SET_NAME}\` |
+        | 📌 Component Version | \`${INPUT_SET_VERSION}\` |
+        | 🏗️ Component Type | \`${INPUT_SET_TYPE}\` |
+        | 📐 Spec Version | \`${INPUT_SPEC_VERSION}\` |
 
         ## ⚙️ Process Details
         | Step | Status |
         |------|--------|
-        | ✅ Input Validation | `✅ Completed` |
-        | 📦 Tool Installation | `${{ steps.install-tool.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🏗️ Argument Building | `${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🔧 SBOM Generation | `${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
-        | 🔍 SBOM Verification | `${{ steps.verify-sbom.outcome == 'success' && '✅ Completed' || '❌ Failed' }}` |
+        | ✅ Input Validation | \`✅ Completed\` |
+        | 📦 Tool Installation | \`${STEP_INSTALL_TOOL_OUTCOME_LABEL}\` |
+        | 🏗️ Argument Building | \`${STEP_BUILD_ARGS_OUTCOME_LABEL}\` |
+        | 🔧 SBOM Generation | \`${STEP_RUN_DOTNET_OUTCOME_LABEL}\` |
+        | 🔍 SBOM Verification | \`${STEP_VERIFY_SBOM_OUTCOME_LABEL}\` |
 
         ## 📤 Execution Results
         | Metric | Value |
         |--------|-------|
-        | ✅ Exit Code | `${{ steps.run-dotnet.outputs.exit-code }}` |
-        | 📄 SBOM Generated | `${{ steps.verify-sbom.outputs.sbom-generated }}` |
-        | 📁 SBOM File | `${{ steps.verify-sbom.outputs.sbom-file || 'not generated' }}` |
-        | 📏 SBOM Size | `${{ steps.verify-sbom.outputs.sbom-size }} bytes` |
-        | ✅ SBOM Valid | `${{ steps.verify-sbom.outputs.sbom-valid }}` |
-        | 🚀 Tool Installation | `${{ steps.install-tool.outputs.has-been-installed == 'true' && '✅ Installed' || steps.install-tool.outputs.is-already-installed == 'true' && '⚠️ Already Installed' || '❌ Failed' }}` |
-        | 🔧 Generated Command | `dotnet tool ${{ steps.build-args.outputs.arguments }}` |
+        | ✅ Exit Code | \`${STEP_RUN_DOTNET_EXIT_CODE}\` |
+        | 📄 SBOM Generated | \`${STEP_VERIFY_SBOM_SBOM_GENERATED}\` |
+        | 📁 SBOM File | \`${STEP_VERIFY_SBOM_SBOM_FILE}\` |
+        | 📏 SBOM Size | \`${STEP_VERIFY_SBOM_SBOM_SIZE} bytes\` |
+        | ✅ SBOM Valid | \`${STEP_VERIFY_SBOM_SBOM_VALID}\` |
+        | 🚀 Tool Installation | \`${STEP_INSTALL_TOOL_HAS_BEEN_INSTALLED_LABEL}\` |
+        | 🔧 Generated Command | \`dotnet tool ${STEP_BUILD_ARGS_ARGUMENTS}\` |
 
         </details>
         EOF
+      env:
+        INPUT_SET_NAME: ${{ inputs.set-name || 'auto-generated' }}
+        INPUT_SET_VERSION: ${{ inputs.set-version || '0.0.0' }}
+        STEP_NORMALIZE_FILENAME_NORMALIZED: ${{ steps.normalize-filename.outputs.normalized || 'auto-generated' }}
+        INPUT_OUTPUT_FORMAT: ${{ inputs.output-format }}
+        INPUT_EXCLUDE_DEV: ${{ inputs.exclude-dev }}
+        INPUT_EXCLUDE_TEST_PROJECTS: ${{ inputs.exclude-test-projects }}
+        INPUT_RECURSIVE: ${{ inputs.recursive }}
+        INPUT_NO_SERIAL_NUMBER_LABEL: ${{ inputs.no-serial-number == 'true' && 'false' || 'true' }}
+        INPUT_ENABLE_GITHUB_LICENSES: ${{ inputs.enable-github-licenses }}
+        INPUT_DISABLE_PACKAGE_RESTORE_LABEL: ${{ inputs.disable-package-restore == 'true' && 'disabled' || 'enabled' }}
+        INPUT_INCLUDE_PROJECT_REFERENCES: ${{ inputs.include-project-references }}
+        INPUT_SET_TYPE: ${{ inputs.set-type }}
+        INPUT_SPEC_VERSION: ${{ inputs.spec-version || 'tool default' }}
+        STEP_INSTALL_TOOL_OUTCOME_LABEL: ${{ steps.install-tool.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_BUILD_ARGS_OUTCOME_LABEL: ${{ steps.build-args.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_RUN_DOTNET_OUTCOME_LABEL: ${{ steps.run-dotnet.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_VERIFY_SBOM_OUTCOME_LABEL: ${{ steps.verify-sbom.outcome == 'success' && '✅ Completed' || '❌ Failed' }}
+        STEP_RUN_DOTNET_EXIT_CODE: ${{ steps.run-dotnet.outputs.exit-code }}
+        STEP_VERIFY_SBOM_SBOM_GENERATED: ${{ steps.verify-sbom.outputs.sbom-generated }}
+        STEP_VERIFY_SBOM_SBOM_FILE: ${{ steps.verify-sbom.outputs.sbom-file || 'not generated' }}
+        STEP_VERIFY_SBOM_SBOM_SIZE: ${{ steps.verify-sbom.outputs.sbom-size }}
+        STEP_VERIFY_SBOM_SBOM_VALID: ${{ steps.verify-sbom.outputs.sbom-valid }}
+        STEP_INSTALL_TOOL_HAS_BEEN_INSTALLED_LABEL: ${{ steps.install-tool.outputs.has-been-installed == 'true' && '✅ Installed' || steps.install-tool.outputs.is-already-installed == 'true' && '⚠️ Already Installed' || '❌ Failed' }}
+        STEP_BUILD_ARGS_ARGUMENTS: ${{ steps.build-args.outputs.arguments }}
 
 branding:
   icon: "file-text"
